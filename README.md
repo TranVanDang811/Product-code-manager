@@ -55,9 +55,6 @@ product-code-manager/
 │
 ├── backups/                   # Thư mục lưu trữ các bản sao lưu cơ sở dữ liệu (.sql)
 │
-├── .env                       # File cấu hình biến môi trường (Được bảo vệ, không đẩy lên Git)
-├── .env.example               # File mẫu hướng dẫn thiết lập biến môi trường
-├── .gitignore                 # Danh sách loại trừ các file bí mật, cache và build
 ├── docker-compose.yml         # Khởi chạy toàn bộ hệ thống bằng Docker
 │
 ├── start-all-services.bat     # Khởi động nhanh toàn bộ dịch vụ trên Windows
@@ -182,7 +179,33 @@ mvn test "-DargLine=-XX:+EnableDynamicAgentLoading"
 
 ---
 
-## 📄 9. Bản quyền & Bảo mật
+## 🧪 9. Hình ảnh dự án
+
+### Admin page
+
+<img width="1914" height="964" alt="image" src="https://github.com/user-attachments/assets/8533bf5a-19f2-48eb-ae24-0b6ca90396ee" />
+
+
+### Mobile App
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <strong>Scan Code</strong><br/>
+        <img src="https://github.com/user-attachments/assets/d7b66aa1-bbca-4096-9581-913fb3ddc722" width="280" />
+      </td>
+      <td align="center">
+        <strong>Product List</strong><br/>
+        <img src="https://github.com/user-attachments/assets/57035db8-e488-49e5-b086-6c7e05c7440f" width="280" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
+## 📄 10. Bản quyền & Bảo mật
 - **Dự án:** DC ĐẲNG CẤP - Product Code Manager
-- **Bản quyền:** Thuộc quyền sở hữu nội bộ của doanh nghiệp.
+- **Bản quyền:** Thuộc quyền sở hữu nội bộ của DangCap.
 - **Bảo mật:** Không chia sẻ mã nguồn chứa cấu hình bảo mật ra bên ngoài.
