@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mã QR kết nối Expo Go | Product Code Manager Mobile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-slate-800/90 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center">
+    <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600 text-white font-bold mb-4 shadow-lg shadow-indigo-500/30">
+      PCM
+    </div>
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Quét mã QR kết nối Mobile App</h1>
+    <p class="text-xs text-slate-400 mt-1">Dành cho ứng dụng <span class="font-semibold text-indigo-400">Expo Go</span> trên thiết bị di động</p>
+
+    <!-- QR Code Box -->
+    <div class="my-6 p-4 bg-white rounded-2xl inline-block shadow-inner mx-auto">
+      <img src="/expo_qr.png" alt="Expo Go QR Code" class="w-64 h-64 mx-auto object-contain" />
+    </div>
+
+    <!-- Direct URL -->
+    <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-700/60 mb-6 text-left">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Địa chỉ Expo URL trực tiếp:</div>
+      <div class="mono text-sm font-bold text-emerald-400 select-all break-all">exp://192.168.100.137:8081</div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="space-y-3 text-left text-xs text-slate-300 border-t border-slate-700/60 pt-5">
+      <div class="font-bold text-slate-200 uppercase text-[11px] tracking-wider mb-2">Hướng dẫn kết nối:</div>
+      <div class="flex items-start gap-2.5">
+        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-[10px]">1</span>
+        <span>Đảm bảo điện thoại và máy tính kết nối <strong>chung một mạng Wi-Fi</strong>.</span>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-[10px]">2</span>
+        <span><strong>Android:</strong> Mở ứng dụng <strong>Expo Go</strong> > bấm <strong>Scan QR code</strong> và quét mã trên.</span>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-[10px]">3</span>
+        <span><strong>iOS:</strong> Mở ứng dụng <strong>Camera</strong> mặc định của iPhone và quét mã QR để mở Expo Go.</span>
+      </div>
+      <div class="flex items-start gap-2.5">
+        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center text-[10px]">4</span>
+        <span>Hoặc trong Expo Go, bấm <strong>Enter URL manually</strong> và nhập: <code class="mono text-indigo-300">exp://192.168.100.137:8081</code></span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
