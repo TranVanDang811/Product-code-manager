@@ -66,8 +66,54 @@ product-code-manager/
 └── README.md                  # Tài liệu hướng dẫn sử dụng & triển khai
 ```
 
+---
 
-## 🚀 4. Hướng dẫn cài đặt & Khởi chạy
+## 🔒 4. Cấu hình bảo mật & Biến môi trường
+
+> [!IMPORTANT]
+> **Nguyên tắc an toàn thông tin:**
+> * Tuyệt đối **KHÔNG commit** các file chứa khóa bí mật (`.env`, `service-account.json`, file credentials) lên kho lưu trữ mã nguồn (Git / GitHub).
+> * Hệ thống đã cấu hình file `.gitignore` tự động loại trừ mọi file môi trường và chứng thực nhạy cảm.
+
+### Thiết lập biến môi trường
+
+1. Sao chép file mẫu `.env.example` thành file `.env` tương ứng trong từng thư mục:
+   * Cho Web Admin: tạo file `frontend-web/.env`
+   * Cho Mobile App: tạo file `mobile-app/.env`
+
+2. Điền thông tin cấu hình Firebase từ dự án của bạn trên [Firebase Console](https://console.firebase.google.com/):
+
+```env
+# Cấu hình Firebase Web (frontend-web/.env)
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+
+# Tài khoản quản trị nội bộ
+VITE_ADMIN_USERNAME=your_admin_username
+VITE_ADMIN_PASSWORD=your_secure_password
+```
+
+```env
+# Cấu hình Firebase Mobile (mobile-app/.env)
+EXPO_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+
+# Tài khoản quản trị nội bộ
+EXPO_PUBLIC_ADMIN_USERNAME=your_admin_username
+EXPO_PUBLIC_ADMIN_PASSWORD=your_secure_password
+```
+
+---
+
+## 🚀 5. Hướng dẫn cài đặt & Khởi chạy
 
 ### Yêu cầu tiên quyết
 * **Node.js**: Phiên bản 18 trở lên (Khuyến nghị Node v20 LTS hoặc v24).
@@ -125,7 +171,7 @@ product-code-manager/
 
 ---
 
-## 🛡️ 5. Quy tắc Nghiệp vụ cốt lõi
+## 🛡️ 6. Quy tắc Nghiệp vụ cốt lõi
 
 ```
 [Mã vạch EAN-13 (13 chữ số)]  <====== (Quan hệ 1 - 1 tuyệt đối) ======>  [Mã nội bộ (6 chữ số)]
@@ -144,7 +190,7 @@ product-code-manager/
 
 ---
 
-## 🎨 6. Thiết kế Giao diện (UI/UX)
+## 🎨 7. Thiết kế Giao diện (UI/UX)
 
 * **Phong cách:** Minimalist Stealth Charcoal (Đen xám tối giản hiện đại).
 * **Bảng màu:**
@@ -160,8 +206,32 @@ product-code-manager/
 
 ---
 
-## 📄 7. Bản quyền & Giấy phép
+## 📸 8. Hình ảnh dự án
 
-* **Đơn vị phát triển:** DC ĐẲNG CẤP
-* **Phiên bản:** v1.0.6 (Serverless Edition)
+### Giao diện Web Quản trị
+<img width="1914" height="964" alt="Web Admin Dashboard" src="https://github.com/user-attachments/assets/8533bf5a-19f2-48eb-ae24-0b6ca90396ee" />
 
+### Ứng dụng Di động (Mobile App)
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <strong>Quét mã vạch (Camera)</strong><br/>
+        <img src="https://github.com/user-attachments/assets/d7b66aa1-bbca-4096-9581-913fb3ddc722" width="280" />
+      </td>
+      <td align="center">
+        <strong>Danh mục sản phẩm</strong><br/>
+        <img src="https://github.com/user-attachments/assets/57035db8-e488-49e5-b086-6c7e05c7440f" width="280" />
+      </td>
+    </tr>
+  </table>
+</div>
+
+---
+
+## 📄 9. Bản quyền & Bảo mật
+
+* **Dự án:** DC ĐẲNG CẤP - Product Code Manager
+* **Phiên bản:** v1.0.6 (Serverless Cloud Edition)
+* **Bản quyền:** Thuộc quyền sở hữu nội bộ của doanh nghiệp.
+* **Bảo mật:** Tuân thủ quy chuẩn mã nguồn mở an toàn, không lưu trữ thông tin nhạy cảm trong Git repository.
