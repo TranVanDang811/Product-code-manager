@@ -11,6 +11,7 @@ import {
 import { productApi } from '../api/productApi';
 import { barcodeApi } from '../api/barcodeApi';
 import { useTheme } from '../context/ThemeContext';
+import * as ImagePicker from 'expo-image-picker';
 import Badge from '../components/Badge';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { formatDateTime } from '../utils/formatters';
@@ -24,6 +25,8 @@ import {
   Trash2,
   Hash,
   Sparkles,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react-native';
 
 export default function ProductDetailScreen({ route, navigation }) {
@@ -96,6 +99,32 @@ export default function ProductDetailScreen({ route, navigation }) {
     );
   };
 
+  const handleDeleteProduct = () => {
+    Alert.alert(
+      'Xác nhận xóa vĩnh viễn ⚠️',
+      `Bạn có chắc chắn muốn XÓA HOÀN TOÀN sản phẩm [${product?.productCode} - ${product?.name}] khỏi cơ sở dữ liệu?\n\n• Dữ liệu sản phẩm sẽ bị xóa vĩnh viễn.\n• Mã vạch ${product?.barcode ? '[' + product.barcode + ']' : ''} sẽ được giải phóng hoàn toàn.\n• Thao tác này KHÔNG THỂ khôi phục!`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa vĩnh viễn',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setActionLoading(true);
+              await productApi.deleteProduct(product.id);
+              Alert.alert('Thành công', 'Đã xóa vĩnh viễn sản phẩm khỏi hệ thống.');
+              navigation.goBack();
+            } catch (err) {
+              Alert.alert('Lỗi', err.message || 'Không thể xóa sản phẩm.');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleUnassignBarcode = () => {
     if (!product?.barcode) return;
     Alert.alert(
@@ -121,6 +150,79 @@ export default function ProductDetailScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+  const handleUpdateImage = () => {
+    Alert.alert('Ảnh đại diện sản phẩm', 'Chọn phương thức cập nhật ảnh đại diện:', [
+      {
+        text: '📸 Chụp ảnh trực tiếp',
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Cần cấp quyền', 'Vui lòng cấp quyền Camera.');
+              return;
+            }
+            const res = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.6,
+              base64: true,
+            });
+            if (!res.canceled && res.assets && res.assets.length > 0) {
+              const asset = res.assets[0];
+              const mime = asset.mimeType || 'image/jpeg';
+              const base64Data = `data:${mime};base64,${asset.base64}`;
+              setActionLoading(true);
+              await productApi.updateProduct(product.id, { imageUrl: base64Data });
+              fetchDetail();
+              Alert.alert('Thành công', 'Đã cập nhật ảnh đại diện lên Firebase!');
+            }
+          } catch (err) {
+            Alert.alert('Lỗi', err.message || 'Không thể chụp ảnh.');
+          } finally {
+            setActionLoading(false);
+          }
+        },
+      },
+      {
+        text: '🖼️ Chọn từ thư viện',
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Cần cấp quyền', 'Vui lòng cấp quyền Thư viện ảnh.');
+              return;
+            }
+            const res = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.6,
+              base64: true,
+            });
+            if (!res.canceled && res.assets && res.assets.length > 0) {
+              const asset = res.assets[0];
+              const mime = asset.mimeType || 'image/jpeg';
+              const base64Data = `data:${mime};base64,${asset.base64}`;
+              setActionLoading(true);
+              await productApi.updateProduct(product.id, { imageUrl: base64Data });
+              fetchDetail();
+              Alert.alert('Thành công', 'Đã cập nhật ảnh đại diện lên Firebase!');
+            }
+          } catch (err) {
+            Alert.alert('Lỗi', err.message || 'Không thể chọn ảnh.');
+          } finally {
+            setActionLoading(false);
+          }
+        },
+      },
+      {
+        text: 'Hủy',
+        style: 'cancel',
+      },
+    ]);
   };
 
   if (loading || !product) {
@@ -154,6 +256,18 @@ export default function ProductDetailScreen({ route, navigation }) {
               </Text>
             </View>
           )}
+
+          {/* Floating Camera Button */}
+          <TouchableOpacity
+            style={[styles.changeImageFab, { backgroundColor: colors.primary }]}
+            onPress={handleUpdateImage}
+            activeOpacity={0.85}
+          >
+            <Camera size={16} color={colors.textOnPrimary || '#000000'} />
+            <Text style={[styles.changeImageFabText, { color: colors.textOnPrimary || '#000000' }]}>
+              {product.imageUrl ? 'Đổi ảnh' : 'Chụp / Thêm ảnh'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* 2. Product Basic Info Card */}
@@ -243,7 +357,7 @@ export default function ProductDetailScreen({ route, navigation }) {
                 })
               }
             >
-              <Text style={styles.assignBtnText}>
+              <Text style={[styles.assignBtnText, { color: colors.textOnPrimary || '#000000' }]}>
                 {product.barcode ? 'Đổi mã vạch' : 'Gán mã vạch mới'}
               </Text>
             </TouchableOpacity>
@@ -335,6 +449,23 @@ export default function ProductDetailScreen({ route, navigation }) {
               </Text>
             </TouchableOpacity>
           )}
+
+          {/* Nút Xóa vĩnh viễn sản phẩm */}
+          <TouchableOpacity
+            style={[
+              styles.deleteForeverBtn,
+              {
+                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2',
+                borderColor: '#ef4444',
+              },
+            ]}
+            onPress={handleDeleteProduct}
+          >
+            <Trash2 size={17} color="#ef4444" />
+            <Text style={[styles.deleteForeverText, { color: '#ef4444' }]}>
+              Xóa vĩnh viễn sản phẩm
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -378,6 +509,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginTop: 8,
+  },
+  changeImageFab: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  changeImageFabText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   card: {
     borderRadius: 20,
@@ -513,5 +665,19 @@ const styles = StyleSheet.create({
   archiveText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  deleteForeverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 8,
+    marginTop: 4,
+  },
+  deleteForeverText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

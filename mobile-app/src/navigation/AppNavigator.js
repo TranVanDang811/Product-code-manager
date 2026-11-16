@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { checkStoredAuth } from '../store/authSlice';
-import { initApiConfig } from '../api/config';
 import { useTheme } from '../context/ThemeContext';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -23,7 +22,6 @@ export default function AppNavigator() {
   useEffect(() => {
     const init = async () => {
       try {
-        await initApiConfig();
         await dispatch(checkStoredAuth());
       } finally {
         setInitializing(false);

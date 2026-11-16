@@ -8,12 +8,15 @@ import {
   StyleSheet,
   RefreshControl,
   ScrollView,
+  Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { productApi } from '../api/productApi';
 import { useTheme } from '../context/ThemeContext';
 import Header from '../components/Header';
 import ProductCard from '../components/ProductCard';
 import CreateProductModal from '../components/CreateProductModal';
+import LoadingOverlay from '../components/LoadingOverlay';
 import { Search, Filter, Package, Plus, X } from 'lucide-react-native';
 
 const STATUS_FILTERS = [
@@ -31,6 +34,7 @@ export default function ProductsScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchProducts = useCallback(async (isRefresh = false) => {
     try {
@@ -58,9 +62,37 @@ export default function ProductsScreen({ navigation }) {
     }
   }, [searchQuery, selectedStatus]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts();
+    }, [fetchProducts])
+  );
+
+  const handleDeleteProduct = (prod) => {
+    Alert.alert(
+      'Xóa vĩnh viễn sản phẩm ⚠️',
+      `Bạn có chắc chắn muốn XÓA HOÀN TOÀN sản phẩm [${prod.productCode} - ${prod.name}] khỏi cơ sở dữ liệu?\n\n• Dữ liệu sản phẩm sẽ bị xóa vĩnh viễn.\n• Mã vạch ${prod.barcode ? '[' + prod.barcode + ']' : ''} sẽ được giải phóng hoàn toàn.\n• Thao tác này KHÔNG THỂ khôi phục!`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa vĩnh viễn',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setActionLoading(true);
+              await productApi.deleteProduct(prod.id);
+              Alert.alert('Thành công', 'Đã xóa vĩnh viễn sản phẩm.');
+              fetchProducts();
+            } catch (err) {
+              Alert.alert('Lỗi', err.message || 'Không thể xóa sản phẩm.');
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
@@ -73,8 +105,8 @@ export default function ProductsScreen({ navigation }) {
             onPress={() => setIsCreateModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Plus size={16} color="#ffffff" strokeWidth={2.5} />
-            <Text style={styles.addHeaderBtnText}>Thêm mới</Text>
+            <Plus size={16} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
+            <Text style={[styles.addHeaderBtnText, { color: colors.textOnPrimary || '#000000' }]}>Thêm mới</Text>
           </TouchableOpacity>
         }
       />
@@ -147,7 +179,7 @@ export default function ProductsScreen({ navigation }) {
                   style={[
                     styles.filterChipText,
                     {
-                      color: isSelected ? '#ffffff' : colors.textSecondary,
+                      color: isSelected ? (colors.textOnPrimary || '#000000') : colors.textSecondary,
                       fontWeight: isSelected ? '700' : '600',
                     },
                   ]}
@@ -168,6 +200,7 @@ export default function ProductsScreen({ navigation }) {
           <ProductCard
             product={item}
             onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+            onDelete={handleDeleteProduct}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -200,8 +233,8 @@ export default function ProductsScreen({ navigation }) {
                 style={[styles.emptyAddBtn, { backgroundColor: colors.primary }]}
                 onPress={() => setIsCreateModalVisible(true)}
               >
-                <Plus size={16} color="#ffffff" style={{ marginRight: 6 }} />
-                <Text style={styles.emptyAddBtnText}>Thêm sản phẩm mới</Text>
+                <Plus size={16} color={colors.textOnPrimary || '#000000'} style={{ marginRight: 6 }} />
+                <Text style={[styles.emptyAddBtnText, { color: colors.textOnPrimary || '#000000' }]}>Thêm sản phẩm mới</Text>
               </TouchableOpacity>
             </View>
           )
@@ -220,7 +253,7 @@ export default function ProductsScreen({ navigation }) {
         onPress={() => setIsCreateModalVisible(true)}
         activeOpacity={0.85}
       >
-        <Plus size={26} color="#ffffff" strokeWidth={2.5} />
+        <Plus size={26} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
       </TouchableOpacity>
 
       {/* CREATE PRODUCT MODAL */}
@@ -231,6 +264,8 @@ export default function ProductsScreen({ navigation }) {
           fetchProducts(true);
         }}
       />
+
+      <LoadingOverlay visible={actionLoading} message="Đang xóa sản phẩm..." />
     </View>
   );
 }

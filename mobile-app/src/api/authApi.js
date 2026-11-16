@@ -1,8 +1,7 @@
-import axiosClient from './axiosClient';
+import { firebaseService } from '../services/firebaseService';
 
 export const authApi = {
-  login: (credentials) => axiosClient.post('/auth/login', credentials),
-  getMe: () => axiosClient.get('/auth/me'),
-  logout: () => axiosClient.post('/auth/logout'),
+  login: (credentials) => firebaseService.login(credentials),
+  getMe: () => firebaseService.getMe(),
+  logout: () => firebaseService.logout(),
 };
-

@@ -1,11 +1,11 @@
-import axiosClient from './axiosClient';
+import { firebaseService } from '../services/firebaseService';
 
 export const productApi = {
-  getProducts: (params = {}) => axiosClient.get('/products', { params }),
-  getProductById: (id) => axiosClient.get(`/products/${id}`),
-  createProduct: (data) => axiosClient.post('/products', data),
-  updateProduct: (id, data) => axiosClient.put(`/products/${id}`, data),
-  updateProductStatus: (id, status) => axiosClient.patch(`/products/${id}/status`, { status }),
-  archiveProduct: (id) => axiosClient.delete(`/products/${id}`),
+  getProducts: (params = {}) => firebaseService.getProducts(params),
+  getProductById: (id) => firebaseService.getProductById(id),
+  createProduct: (data) => firebaseService.createProduct(data),
+  updateProduct: (id, data) => firebaseService.updateProduct(id, data),
+  updateProductStatus: (id, status) => firebaseService.updateProductStatus(id, status),
+  archiveProduct: (id) => firebaseService.archiveProduct(id),
+  deleteProduct: (id) => firebaseService.deleteProduct(id),
 };
-

@@ -1,20 +1,37 @@
 export default function Badge({ status, text }) {
-  const getBadgeStyle = () => {
+  const getBadgeConfig = () => {
     switch (status) {
       case 'ACTIVE':
-        return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20';
-      case 'INACTIVE':
-        return 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20';
-      case 'ARCHIVED':
-        return 'bg-slate-100 text-slate-600 ring-1 ring-slate-500/20';
       case 'FOUND':
-        return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20';
+        return {
+          wrapper: 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60',
+          dot: 'bg-emerald-400',
+        };
+      case 'INACTIVE':
+        return {
+          wrapper: 'bg-amber-950/50 text-amber-300 border-amber-800/60',
+          dot: 'bg-amber-400',
+        };
+      case 'ARCHIVED':
+        return {
+          wrapper: 'bg-zinc-800/80 text-zinc-300 border-zinc-700/60',
+          dot: 'bg-zinc-400',
+        };
       case 'NOT_FOUND':
-        return 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20';
+        return {
+          wrapper: 'bg-rose-950/50 text-rose-300 border-rose-800/60',
+          dot: 'bg-rose-400',
+        };
       case 'INVALID':
-        return 'bg-purple-50 text-purple-700 ring-1 ring-purple-600/20';
+        return {
+          wrapper: 'bg-amber-950/50 text-amber-300 border-amber-800/60',
+          dot: 'bg-amber-400',
+        };
       default:
-        return 'bg-slate-100 text-slate-700 ring-1 ring-slate-400/20';
+        return {
+          wrapper: 'bg-zinc-800 text-zinc-300 border-zinc-700',
+          dot: 'bg-zinc-400',
+        };
     }
   };
 
@@ -32,18 +49,20 @@ export default function Badge({ status, text }) {
       case 'NOT_FOUND':
         return 'Không tìm thấy';
       case 'INVALID':
-        return 'Không hợp lệ';
+        return 'Sai chuẩn';
       default:
         return status;
     }
   };
 
+  const config = getBadgeConfig();
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeStyle()}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.wrapper}`}
     >
-      {getLabel()}
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      <span>{getLabel()}</span>
     </span>
   );
 }
-

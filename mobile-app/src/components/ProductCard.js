@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import Badge from './Badge';
-import { Package, ChevronRight, Barcode, Hash } from 'lucide-react-native';
+import { Package, ChevronRight, Barcode, Hash, Trash2 } from 'lucide-react-native';
 
-export default function ProductCard({ product, onPress }) {
+export default function ProductCard({ product, onPress, onDelete }) {
   const { colors, isDark } = useTheme();
 
   return (
@@ -19,6 +19,7 @@ export default function ProductCard({ product, onPress }) {
       ]}
       activeOpacity={0.75}
       onPress={onPress}
+      onLongPress={() => onDelete && onDelete(product)}
     >
       {/* Product Image Thumbnail */}
       <View
@@ -83,6 +84,22 @@ export default function ProductCard({ product, onPress }) {
           </Text>
         </View>
       </View>
+
+      {onDelete && (
+        <TouchableOpacity
+          style={[
+            styles.deleteBtn,
+            {
+              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2',
+            },
+          ]}
+          onPress={() => onDelete(product)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Trash2 size={15} color="#ef4444" />
+        </TouchableOpacity>
+      )}
 
       <View style={[styles.chevronWrapper, { backgroundColor: colors.bgTertiary }]}>
         <ChevronRight size={16} color={colors.textSecondary} />
@@ -160,6 +177,14 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 12,
     fontWeight: '600',
+  },
+  deleteBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
   },
   chevronWrapper: {
     width: 28,

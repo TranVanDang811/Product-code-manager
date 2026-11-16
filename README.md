@@ -1,18 +1,21 @@
 # 🛡️ DC ĐẲNG CẤP - PRODUCT CODE MANAGER (PCM)
 
 > **Hệ thống Quản lý Ánh xạ Mã Vạch EAN-13 & Mã Nội Bộ 6 Số (Quan hệ 1 - 1)**  
-> Giải pháp toàn diện cho quản lý kho hàng và bán lẻ: Gồm Backend RESTful API, Web Admin Dashboard và Ứng dụng Di động Quét mã Barcode chuyên dụng.
+> Kiến trúc Serverless hiện đại: Đồng bộ đám mây thời gian thực với **Google Cloud Firestore**, giao diện Web Quản trị React Vite và Ứng dụng Di động React Native Expo chuyên dụng.
 
 ---
 
 ## 📌 1. Giới thiệu tổng quan
 
-Hệ thống **Product Code Manager (PCM)** giải quyết bài toán cốt lõi trong bán lẻ và vận hành kho hàng:
-- **Ánh xạ ràng buộc 1 - 1 tuyệt đối:** Mỗi Mã vạch EAN-13 (13 chữ số) chỉ tương ứng với duy nhất 1 Mã hàng nội bộ (6 chữ số).
-- **Thuật toán GS1 Modulo-10 Checksum:** Tự động kiểm tra tính hợp lệ của mã vạch quốc tế, ngăn chặn sai sót nhập liệu.
-- **Tra cứu thời gian thực < 50ms:** Tìm kiếm tức thì khi quét bằng camera điện thoại hoặc máy quét mã vạch chuyên dụng.
-- **Giao diện di động linh hoạt:** Hỗ trợ chuyển đổi mượt mà giữa chế độ **Tối (Dark Luxury Neon)** và **Sáng (Modern Clean)**.
-- **Truy cập từ xa bảo mật:** Tích hợp kênh truyền mã hóa HTTPS (Cloudflare Tunnel), cho phép nhân viên sử dụng mạng 4G/5G hoặc Wi-Fi ngoài cửa hàng để quét mã an toàn.
+Hệ thống **Product Code Manager (PCM)** giải quyết bài toán cốt lõi trong bán lẻ, kiểm toán và vận hành kho hàng:
+
+* **Ánh xạ ràng buộc 1 - 1 tuyệt đối:** Mỗi Mã vạch EAN-13 (13 chữ số) chỉ tương ứng với duy nhất 1 Mã sản phẩm nội bộ (6 chữ số).
+* **Thuật toán GS1 Modulo-10 Checksum:** Tự động kiểm tra tính hợp lệ của mã vạch quốc tế, phân tích Check Digit và ngăn chặn sai sót nhập liệu ngay tại nguồn.
+* **Đồng bộ thời gian thực (Real-time Cloud):** Kết nối trực tiếp cơ sở dữ liệu Google Cloud Firestore với độ trễ cực thấp, không cần duy trì cụm máy chủ backend phức tạp.
+* **Quét mã vạch đa nền tảng:**
+  * **Web Admin:** Hỗ trợ quét qua Camera (sử dụng thư viện ZXing Barcode Engine) hoặc nhập liệu tra cứu nhanh bằng bàn phím / máy quét barcode USB.
+  * **Mobile App:** Sử dụng Camera phần cứng quét liên tục, tự động nhận diện và gán mã vào biểu mẫu sản phẩm.
+* **Chuẩn giao diện Tương phản cao (High-Contrast Stealth Charcoal):** Phong cách Đen xám tối giản hiện đại, bảo vệ mắt khi vận hành trong kho hàng, đảm bảo tương phản tuyệt đối (nền tối chữ trắng sáng, nền sáng chữ đen rõ nét).
 
 ---
 
@@ -20,13 +23,10 @@ Hệ thống **Product Code Manager (PCM)** giải quyết bài toán cốt lõi
 
 | Phân hệ | Công nghệ | Vai trò kỹ thuật |
 | :--- | :--- | :--- |
-| **Backend API** | Java 21, Spring Boot 3.4, Spring Security, JWT (HMAC-SHA256), Spring Data JPA, Flyway Migration | Xử lý nghiệp vụ lõi, xác thực phân quyền, bảo vệ toàn vẹn dữ liệu |
-| **Cơ sở dữ liệu** | MySQL 8.4 LTS | Lưu trữ quan hệ ACID: sản phẩm, mã vạch, lịch sử quét và người dùng |
-| **Web Admin** | React 19, Vite, Tailwind CSS, Redux Toolkit, Axios, Lucide Icons | Trang quản trị danh mục, thống kê kho, phân trang và tìm kiếm |
-| **Mobile App** | React Native, Expo SDK 58, Expo Camera, SecureStore | Ứng dụng quét mã vạch tốc độ cao trên thiết bị di động |
-| **Lưu trữ đám mây** | Cloudinary REST API | Lưu trữ và tối ưu hóa hình ảnh sản phẩm tự động |
-| **Kết nối từ xa** | Cloudflare Tunnel | Kênh truyền HTTPS mã hóa kết nối tới máy chủ mà không cần mở cổng Router |
-| **Đóng gói** | Docker, Docker Compose, EAS Build | Container hóa hệ thống và xuất file cài đặt Android APK độc lập |
+| **Cơ sở dữ liệu đám mây** | Google Firebase Cloud Firestore | Lưu trữ dữ liệu NoSQL phân tán thời gian thực: Danh mục sản phẩm, bảng tra cứu mã vạch, lịch sử quét mã, thông tin kiểm toán |
+| **Web Admin Dashboard** | React 19, Vite, Tailwind CSS, Redux Toolkit, Lucide Icons | Trang quản trị nghiệp vụ: thống kê số liệu, quản lý sản phẩm, đối soát lịch sử quét mã, gán và hủy mã vạch |
+| **Mobile App (Android)** | React Native, Expo SDK, Expo Camera, Expo Image Picker | Ứng dụng di động chuyên dụng cho nhân viên kho: quét mã camera, chụp ảnh thực tế, đồng bộ trực tiếp |
+| **Đóng gói Android APK** | EAS Build (Expo Application Services) | Đóng gói bộ cài đặt Android APK độc lập (.apk) cài trực tiếp không qua CH Play |
 
 ---
 
@@ -34,155 +34,134 @@ Hệ thống **Product Code Manager (PCM)** giải quyết bài toán cốt lõi
 
 ```text
 product-code-manager/
-├── backend/                   # Mã nguồn Spring Boot REST API
-│   ├── src/main/java/         # Controllers, Services, Repositories, Security
-│   ├── src/main/resources/    # Cấu hình application.yml & Migration SQL
-│   └── Dockerfile             # Container hóa Backend
+├── frontend-web/              # Phân hệ Web Quản trị React 19 + Vite
+│   ├── src/
+│   │   ├── api/               # Tầng dịch vụ gọi dữ liệu Firestore
+│   │   ├── components/        # Components dùng chung (Badge, Modal, Table, Scanner...)
+│   │   ├── context/           # Theme Context (Đen xám tối giản)
+│   │   ├── firebase/          # Khởi tạo kết nối Firebase SDK
+│   │   ├── pages/             # Dashboard, Sản phẩm, Lịch sử, Tra cứu
+│   │   ├── routes/            # Điều hướng React Router
+│   │   └── utils/             # Thuật toán GS1 EAN-13, định dạng ngày giờ
+│   ├── package.json           # Thư viện phụ thuộc Web
+│   └── vite.config.js         # Cấu hình Vite Build Tool
 │
-├── frontend-web/              # Giao diện Web Quản trị React
-│   ├── src/                   # Components, Pages, Store, API Clients
-│   ├── public/                # Tài nguyên tĩnh và trang tải ứng dụng di động
-│   └── Dockerfile             # Container hóa Web Frontend
+├── mobile-app/                # Phân hệ Ứng dụng Di động React Native Expo
+│   ├── assets/                # Biểu tượng ứng dụng, Splash Screen, Logo
+│   ├── src/
+│   │   ├── components/        # Modal thêm mới, Card sản phẩm, Badge
+│   │   ├── context/           # Theme Context & Auth Context
+│   │   ├── screens/           # Màn hình Quét mã, Danh mục, Chi tiết, Cài đặt
+│   │   ├── services/          # Tầng kết nối Firebase Mobile SDK
+│   │   └── utils/             # Thuật toán Modulo-10 và kiểm tra EAN-13
+│   ├── app.json               # Cấu hình quyền truy cập Camera & Định danh App
+│   ├── eas.json               # Cấu hình Build profile Android APK độc lập
+│   └── package.json           # Thư viện phụ thuộc Mobile
 │
-├── mobile-app/                # Ứng dụng Di động Quét mã (Expo / React Native)
-│   ├── assets/                # Logo thương hiệu, Biểu tượng ứng dụng, Splash
-│   ├── src/screens/           # Màn hình Quét mã, Danh mục, Chi tiết, Cài đặt
-│   └── app.json               # Cấu hình quyền truy cập Camera & Thông số App
-│
-├── docs/                      # Tài liệu phân tích nghiệp vụ & thiết kế Database
-│   ├── BUSINESS_ANALYSIS.md   # Yêu cầu nghiệp vụ chi tiết
-│   └── DATABASE_DESIGN.md     # Lược đồ quan hệ ERD & chỉ mục Index
-│
-├── backups/                   # Thư mục lưu trữ các bản sao lưu cơ sở dữ liệu (.sql)
-│
-├── .env                       # File cấu hình biến môi trường (Được bảo vệ, không đẩy lên Git)
-├── .env.example               # File mẫu hướng dẫn thiết lập biến môi trường
-├── .gitignore                 # Danh sách loại trừ các file bí mật, cache và build
-├── docker-compose.yml         # Khởi chạy toàn bộ hệ thống bằng Docker
-│
-├── start-all-services.bat     # Khởi động nhanh toàn bộ dịch vụ trên Windows
-├── run-cloudflare-tunnel.bat  # Kích hoạt đường hầm truy cập từ xa
-├── backup-database.bat        # Sao lưu an toàn cơ sở dữ liệu MySQL
-├── restore-database.bat       # Phục hồi dữ liệu từ bản sao lưu gần nhất
-├── build-apk.bat              # Đóng gói file cài đặt Android APK
-└── product-code-manager.apk   # File cài đặt ứng dụng Android mới nhất
+├── .env.example               # Mẫu khai báo biến môi trường (KHÔNG chứa secret)
+├── .gitignore                 # Loại trừ file môi trường, cache, node_modules và artifacts
+├── start-all-services.bat     # Khởi động nhanh Web Admin Dashboard (Port 5173)
+├── start-mobile-app.bat       # Khởi động ứng dụng di động qua Expo Go
+├── build-apk.bat              # Script đóng gói file Android APK qua EAS Build
+└── README.md                  # Tài liệu hướng dẫn sử dụng & triển khai
 ```
 
+
+## 🚀 4. Hướng dẫn cài đặt & Khởi chạy
+
+### Yêu cầu tiên quyết
+* **Node.js**: Phiên bản 18 trở lên (Khuyến nghị Node v20 LTS hoặc v24).
+* **Trình quản lý gói**: `npm` hoặc `yarn`.
+* Thiết bị Android hoặc ứng dụng **Expo Go** (nếu kiểm thử trên điện thoại).
+
 ---
 
-## 🔒 4. Cấu hình biến môi trường an toàn
+### A. Khởi chạy Web Admin Dashboard
 
-Dự án sử dụng cơ chế nạp biến môi trường tập trung. Để thiết lập hệ thống, tạo file `.env` từ file mẫu:
+1. Mở cửa sổ dòng lệnh tại thư mục `frontend-web`:
+   ```bash
+   cd frontend-web
+   npm install
+   npm run dev
+   ```
+2. Hoặc nhấp đúp trực tiếp vào file tiện ích:
+   👉 **`start-all-services.bat`**
+3. Truy cập hệ thống tại: **`http://localhost:5173`**
+4. Đăng nhập bằng tài khoản quản trị đã thiết lập trong file `.env`.
 
-```bash
-# Sao chép file mẫu
-cp .env.example .env
+---
+
+### B. Khởi chạy Ứng dụng Di động (Môi trường phát triển)
+
+1. Mở cửa sổ dòng lệnh tại thư mục `mobile-app`:
+   ```bash
+   cd mobile-app
+   npm install
+   npx expo start -c
+   ```
+2. Hoặc nhấp đúp trực tiếp vào file:
+   👉 **`start-mobile-app.bat`**
+3. Cài đặt ứng dụng **Expo Go** từ Google Play Store trên điện thoại Android.
+4. Mở Expo Go và quét mã QR hiển thị trên màn hình Terminal để trải nghiệm ứng dụng tức thì.
+
+---
+
+### C. Đóng gói file cài đặt Android APK độc lập (EAS Build)
+
+Ứng dụng hỗ trợ xuất trực tiếp file `.apk` độc lập (không cần thông qua cửa hàng ứng dụng) để cài trực tiếp lên điện thoại Android của nhân viên:
+
+1. Đăng nhập tài khoản Expo CLI (nếu chưa đăng nhập):
+   ```bash
+   npx eas-cli login
+   ```
+2. Chạy lệnh đóng gói:
+   ```bash
+   cd mobile-app
+   npx eas-cli build --platform android --profile preview
+   ```
+3. Hoặc nhấp đúp vào file tiện ích:
+   👉 **`build-apk.bat`**
+4. Sau khi tiến trình build trên Expo Cloud hoàn tất, hệ thống sẽ trả về đường dẫn tải trực tiếp file `.apk`. Tải file về điện thoại và tiến hành cài đặt.
+
+---
+
+## 🛡️ 5. Quy tắc Nghiệp vụ cốt lõi
+
+```
+[Mã vạch EAN-13 (13 chữ số)]  <====== (Quan hệ 1 - 1 tuyệt đối) ======>  [Mã nội bộ (6 chữ số)]
 ```
 
-Cấu trúc các biến cấu hình trong `.env` (Điền thông tin bảo mật của bạn):
-
-```env
-# 1. CẤU HÌNH SERVER
-SPRING_PROFILES_ACTIVE=dev
-PORT=8080
-
-# 2. CƠ SỞ DỮ LIỆU MYSQL
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=product_code_manager
-DB_USER=root
-DB_PASSWORD=your_mysql_password_here
-
-# 3. BẢO MẬT & XÁC THỰC JWT
-JWT_SECRET=your_secure_random_hmac_secret_key_at_least_256_bits
-JWT_EXPIRATION_MS=86400000
-ADMIN_INITIAL_USERNAME=your_admin_username
-ADMIN_INITIAL_PASSWORD=your_secure_admin_password
-
-# 4. LƯU TRỮ HÌNH ẢNH (CLOUDINARY)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-CLOUDINARY_FOLDER=products
-
-# 5. GIAO DIỆN WEB QUẢN TRỊ
-VITE_PORT=5173
-VITE_API_BASE_URL=/api/v1
-VITE_BACKEND_TARGET=http://localhost:8080
-
-# 6. ĐỊA CHỈ KẾT NỐI CHO THIẾT BỊ DI ĐỘNG
-EXPO_PUBLIC_CLOUDFLARE_URL=https://your-tunnel-domain.trycloudflare.com/api/v1
-EXPO_PUBLIC_LOCAL_LAN_URL=http://your-local-ip:8080/api/v1
-```
-
-> [!IMPORTANT]
-> **Quy tắc an toàn thông tin:**
-> - Tuyệt đối không đẩy file `.env` chứa mật khẩu thực tế lên GitHub hoặc các nền tảng công khai.
-> - File `.gitignore` của dự án đã được cấu hình mặc định để tự động bỏ qua toàn bộ file `.env`.
+1. **Ràng buộc EAN-13:**
+   * Đúng định dạng 13 chữ số chuẩn quốc tế GS1.
+   * Chữ số thứ 13 là **Check Digit** được tính toán theo thuật toán Modulo-10:
+     $$\text{Check Digit} = (10 - (\sum \text{vị trí lẻ} + 3 \times \sum \text{vị trí chẵn}) \bmod 10) \bmod 10$$
+   * Một mã vạch chỉ được gán cho duy nhất một sản phẩm tại một thời điểm.
+2. **Ràng buộc Mã nội bộ 6 số:**
+   * Đúng 6 chữ số (`000001` đến `999999`).
+   * Mã sản phẩm là duy nhất trong toàn hệ thống.
+3. **Tra cứu & Kiểm toán:**
+   * Mọi lượt quét mã từ Camera Web hoặc Mobile đều được tự động lưu lại lịch sử gồm: Thời gian quét, Mã quét, Kết quả đối soát (`FOUND`, `NOT_FOUND`, `INVALID`), Tên thiết bị và Thông tin sản phẩm liên kết.
 
 ---
 
-## 🚀 5. Hướng dẫn khởi động hệ thống
+## 🎨 6. Thiết kế Giao diện (UI/UX)
 
-### Cách 1: Khởi động tự động bằng Script Windows (Khuyên dùng)
-Nhấp đúp chuột vào file:
-👉 **`start-all-services.bat`**
-
-Kịch bản sẽ tự động mở lần lượt các dịch vụ:
-1. Cơ sở dữ liệu MySQL container (Cổng `3306`).
-2. Backend Spring Boot REST API (Cổng `8080`).
-3. Kênh truyền Cloudflare Tunnel (Kết nối di động từ xa).
-4. Web Admin Dashboard (Cổng `5173`).
-
----
-
-### Cách 2: Khởi chạy bằng Docker Compose
-Dành cho môi trường máy chủ hoặc triển khai độc lập:
-```bash
-# Khởi chạy nền toàn bộ dịch vụ
-docker-compose up -d --build
-
-# Kiểm tra trạng thái hoạt động
-docker-compose ps
-```
+* **Phong cách:** Minimalist Stealth Charcoal (Đen xám tối giản hiện đại).
+* **Bảng màu:**
+  * Nền chính: Zinc 950 (`#09090b`)
+  * Thẻ dữ liệu & Card: Charcoal Zinc 900 (`#121214` / `#18181b`)
+  * Đường viền: Neutral Zinc 800 (`#27272a`)
+  * Trạng thái Khớp mã (`FOUND`): Neon Emerald (`#10b981`)
+  * Trạng thái Chưa có (`NOT_FOUND`): Neon Rose (`#f43f5e`)
+  * Trạng thái Sai chuẩn (`INVALID`): Neon Amber (`#f59e0b`)
+* **Nguyên tắc tương phản:**
+  * Mọi nội dung trên nền tối đều dùng chữ trắng sáng (`#ffffff`) hoặc xám bạc (`#d4d4d8`).
+  * Mọi nút bấm hoặc thẻ lọc mang nền sáng/trắng đều dùng chữ đen đậm (`#000000`) nhằm đảm bảo khả năng đọc tốt nhất trong mọi điều kiện ánh sáng.
 
 ---
 
-## 📱 6. Cài đặt Ứng dụng Di động (Mobile App)
+## 📄 7. Bản quyền & Giấy phép
 
-### Cài đặt file APK trực tiếp:
-1. Kết nối điện thoại với máy tính hoặc tải file cài đặt **`product-code-manager.apk`** được đặt tại thư mục gốc của dự án.
-2. Mở file `.apk` trên điện thoại Android và chọn **Cài đặt**.
-3. Mở ứng dụng, vào phần **⚙️ Cài đặt** để kiểm tra hoặc cập nhật đường dẫn máy chủ của bạn.
+* **Đơn vị phát triển:** DC ĐẲNG CẤP
+* **Phiên bản:** v1.0.6 (Serverless Edition)
 
-### Môi trường phát triển di động (Expo Dev):
-```bash
-cd mobile-app
-npm install
-npm start
-```
-
----
-
-## 💾 7. Sao lưu & Phục hồi Dữ liệu (Backup & Restore)
-
-Để đảm bảo an toàn tuyệt đối cho dữ liệu hàng hóa, hệ thống tích hợp sẵn kịch bản tự động:
-- **Sao lưu dữ liệu:** Chạy file `backup-database.bat` -> Toàn bộ dữ liệu được kết xuất ra file `.sql` nén an toàn trong thư mục `backups/`.
-- **Khôi phục dữ liệu:** Chạy file `restore-database.bat` -> Tự động nhận diện bản sao lưu mới nhất để khôi phục khi có sự cố.
-
----
-
-## 🧪 8. Kiểm thử tự động (Automated Tests)
-
-Chạy bộ kiểm thử tích hợp toàn diện (Integration Tests) để xác nhận nghiệp vụ:
-```bash
-cd backend
-mvn test "-DargLine=-XX:+EnableDynamicAgentLoading"
-```
-
----
-
-## 📄 9. Bản quyền & Bảo mật
-- **Dự án:** DC ĐẲNG CẤP - Product Code Manager
-- **Bản quyền:** Thuộc quyền sở hữu nội bộ của doanh nghiệp.
-- **Bảo mật:** Không chia sẻ mã nguồn chứa cấu hình bảo mật ra bên ngoài.

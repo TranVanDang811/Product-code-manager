@@ -1,0 +1,9 @@
+# EAS Build ignore file (used instead of .gitignore during eas build)
+node_modules/
+.expo/
+dist/
+build/
+*.apk
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+service-account*.json

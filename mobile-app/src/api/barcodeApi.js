@@ -1,8 +1,7 @@
-import axiosClient from './axiosClient';
+import { firebaseService } from '../services/firebaseService';
 
 export const barcodeApi = {
-  lookup: (data) => axiosClient.post('/barcodes/lookup', data),
-  assign: (data) => axiosClient.post('/barcodes/assign', data),
-  unassign: (productId) => axiosClient.delete(`/barcodes/${productId}`),
+  lookup: (data) => firebaseService.lookupBarcode(data),
+  assign: (data) => firebaseService.assignBarcode(data),
+  unassign: (productId) => firebaseService.unassignBarcode(productId),
 };
-

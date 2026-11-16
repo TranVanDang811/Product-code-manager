@@ -95,20 +95,34 @@ export default function ScannerScreen({ navigation }) {
 
   const lookupBarcode = async (barcode) => {
     if (!barcode) return;
+    let cleanBarcode = String(barcode).trim();
+    if (cleanBarcode.length === 12 && isValidEan13('0' + cleanBarcode)) {
+      cleanBarcode = '0' + cleanBarcode;
+    }
+
     try {
       setLoading(true);
       const res = await barcodeApi.lookup({
-        barcode: barcode.trim(),
+        barcode: cleanBarcode,
         deviceInfo: `Mobile App (${Platform.OS})`,
       });
 
       if (res && res.data) {
+        if (res.data.status === 'NOT_FOUND') {
+          // Mã vạch chưa có trong dữ liệu -> Tự động gán ngay vào input và mở form tạo sản phẩm!
+          const code = res.data.barcodeScanned || res.data.barcode || cleanBarcode;
+          setPendingNewBarcode(String(code));
+          setIsResultModalVisible(false);
+          setIsCreateModalVisible(true);
+          return;
+        }
+
         setResult(res.data);
         setIsResultModalVisible(true);
       }
     } catch (err) {
       console.error('Barcode lookup failed', err);
-      Alert.alert('Lỗi tra cứu', 'Không thể kết nối đến máy chủ Backend.');
+      Alert.alert('Lỗi tra cứu', 'Không thể kết nối đến cơ sở dữ liệu Firebase.');
     } finally {
       setLoading(false);
     }
@@ -152,7 +166,7 @@ export default function ScannerScreen({ navigation }) {
           style={[styles.permissionBtn, { backgroundColor: colors.primary }]}
           onPress={requestPermission}
         >
-          <Text style={styles.permissionBtnText}>Cấp quyền Camera ngay</Text>
+          <Text style={[styles.permissionBtnText, { color: colors.textOnPrimary || '#000000' }]}>Cấp quyền Camera ngay</Text>
         </TouchableOpacity>
       </View>
     );
@@ -371,7 +385,7 @@ export default function ScannerScreen({ navigation }) {
                     <View style={styles.barcodeSubRow}>
                       <Barcode size={13} color={colors.accent} />
                       <Text style={[styles.barcodeSub, { color: colors.textSecondary }]}>
-                        {result.barcodeScanned}
+                        {result?.barcodeScanned || result?.barcode}
                       </Text>
                     </View>
                   </View>
@@ -392,8 +406,8 @@ export default function ScannerScreen({ navigation }) {
                   }}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.detailBtnText}>Xem chi tiết sản phẩm</Text>
-                  <ArrowRight size={16} color="#ffffff" strokeWidth={2.5} />
+                  <Text style={[styles.detailBtnText, { color: colors.textOnPrimary || '#000000' }]}>Xem chi tiết sản phẩm</Text>
+                  <ArrowRight size={16} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
                 </TouchableOpacity>
               </View>
             ) : result && result.status === 'NOT_FOUND' ? (
@@ -414,7 +428,7 @@ export default function ScannerScreen({ navigation }) {
                       Mã vạch chưa có trong dữ liệu
                     </Text>
                     <Text style={[styles.statusBannerDesc, { color: colors.danger }]}>
-                      Mã [{result.barcodeScanned}] chưa liên kết với bất kỳ sản phẩm nào.
+                      Mã [{result?.barcodeScanned || result?.barcode}] chưa liên kết với bất kỳ sản phẩm nào.
                     </Text>
                   </View>
                 </View>
@@ -433,7 +447,7 @@ export default function ScannerScreen({ navigation }) {
                     Bạn có muốn thêm sản phẩm mới với mã vạch này ngay không?
                   </Text>
                   <Text style={[styles.promptSub, { color: colors.textSecondary }]}>
-                    Mã EAN-13 [{result.barcodeScanned}] sẽ được tự động điền sẵn vào biểu mẫu tạo sản phẩm mới.
+                    Mã EAN-13 [{result?.barcodeScanned || result?.barcode}] sẽ được tự động điền sẵn vào biểu mẫu tạo sản phẩm mới.
                   </Text>
                 </View>
 
@@ -447,15 +461,15 @@ export default function ScannerScreen({ navigation }) {
                     },
                   ]}
                   onPress={() => {
-                    const code = result.barcodeScanned;
+                    const code = result?.barcodeScanned || result?.barcode || '';
                     handleCloseResultModal();
-                    setPendingNewBarcode(code);
+                    setPendingNewBarcode(String(code));
                     setIsCreateModalVisible(true);
                   }}
                   activeOpacity={0.85}
                 >
-                  <Plus size={18} color="#ffffff" strokeWidth={2.5} />
-                  <Text style={styles.addNewProductBtnText}>Thêm sản phẩm mới với mã này</Text>
+                  <Plus size={18} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
+                  <Text style={[styles.addNewProductBtnText, { color: colors.textOnPrimary || '#000000' }]}>Thêm sản phẩm mới với mã này</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -485,12 +499,35 @@ export default function ScannerScreen({ navigation }) {
                       Mã vạch không đúng chuẩn
                     </Text>
                     <Text style={[styles.statusBannerDesc, { color: colors.warning }]}>
-                      Mã [{result?.barcodeScanned}] không đạt tiêu chuẩn 13 chữ số EAN-13.
+                      Mã [{result?.barcodeScanned || result?.barcode}] không đạt tiêu chuẩn 13 chữ số EAN-13.
                     </Text>
                   </View>
                 </View>
+
+                {/* Even if invalid, allow user to prefill & edit it */}
                 <TouchableOpacity
-                  style={[styles.closeActionBtn, { backgroundColor: colors.bgTertiary }]}
+                  style={[
+                    styles.addNewProductBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      shadowColor: colors.primary,
+                      marginTop: 14,
+                    },
+                  ]}
+                  onPress={() => {
+                    const code = result?.barcodeScanned || result?.barcode || '';
+                    handleCloseResultModal();
+                    setPendingNewBarcode(String(code));
+                    setIsCreateModalVisible(true);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Plus size={18} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
+                  <Text style={[styles.addNewProductBtnText, { color: colors.textOnPrimary || '#000000' }]}>Tạo sản phẩm & chỉnh sửa mã này</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.closeActionBtn, { backgroundColor: colors.bgTertiary, marginTop: 10 }]}
                   onPress={handleCloseResultModal}
                 >
                   <Text style={[styles.closeActionText, { color: colors.textSecondary }]}>
@@ -568,8 +605,8 @@ export default function ScannerScreen({ navigation }) {
                 disabled={!manualBarcode}
                 onPress={handleManualLookup}
               >
-                <Search size={16} color="#ffffff" />
-                <Text style={styles.detailBtnText}>Tra cứu ngay</Text>
+                <Search size={16} color={colors.textOnPrimary || '#000000'} />
+                <Text style={[styles.detailBtnText, { color: colors.textOnPrimary || '#000000' }]}>Tra cứu ngay</Text>
               </TouchableOpacity>
 
               <View style={styles.manualOrDivider}>
@@ -605,13 +642,17 @@ export default function ScannerScreen({ navigation }) {
 
       {/* 5. CREATE PRODUCT MODAL */}
       <CreateProductModal
+        key={pendingNewBarcode || 'create-modal'}
         visible={isCreateModalVisible}
-        onClose={() => setIsCreateModalVisible(false)}
+        onClose={() => {
+          setIsCreateModalVisible(false);
+          setPendingNewBarcode('');
+        }}
         initialBarcode={pendingNewBarcode}
         onSuccess={(newProduct) => {
           Alert.alert(
             'Tạo sản phẩm thành công',
-            `Sản phẩm [${newProduct.productCode}] - "${newProduct.name}" đã được lưu!`,
+            `Sản phẩm [${newProduct.productCode}] - "${newProduct.name}" đã được lưu vào Firebase kèm mã vạch [${newProduct.barcode}]!`,
             [
               {
                 text: 'Xem chi tiết',

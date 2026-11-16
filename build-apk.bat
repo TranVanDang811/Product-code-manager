@@ -8,7 +8,7 @@ echo Dang chuan bi moi truong build tren Cloud Expo...
 echo.
 
 cd /d "%~dp0mobile-app"
-set PATH=C:\Users\LENOVO\AppData\Local\nvm\v22.22.1;%PATH%
+set PATH=C:\nvm4w\nodejs;%PATH%
 set EAS_NO_VCS=1
 set EAS_SKIP_AUTO_FINGERPRINT=1
 

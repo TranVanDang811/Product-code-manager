@@ -1,12 +1,18 @@
-# Environment variables
+# Environment variables & Secret Keys
 .env
-.env.local
-.env.*.local
+.env.*
 *.env
+**/.env
+**/.env.*
+*firebase-adminsdk*.json
+*-adminsdk-*.json
+service-account*.json
 
 # Keep example files
 !.env.example
+!**/.env.example
 !*.example
+!**/*.example
 
 # Build outputs
 target/
@@ -40,4 +46,5 @@ backups/*.sql
 .vscode/
 .DS_Store
 Thumbs.db
+.gemini/
 

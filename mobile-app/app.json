@@ -2,7 +2,7 @@
   "expo": {
     "name": "Product Code Manager",
     "slug": "pcm-mobile-app",
-    "version": "1.0.2",
+    "version": "1.0.6",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -24,7 +24,7 @@
         "backgroundColor": "#000000"
       },
       "package": "com.pcm.productcodemanager",
-      "versionCode": 3,
+      "versionCode": 7,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.INTERNET"
@@ -35,6 +35,13 @@
         "expo-camera",
         {
           "cameraPermission": "Ứng dụng cần quyền truy cập Camera để quét mã vạch sản phẩm EAN-13."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ứng dụng cần quyền truy cập thư viện ảnh để chọn ảnh đại diện sản phẩm.",
+          "cameraPermission": "Ứng dụng cần quyền truy cập Camera để chụp ảnh đại diện sản phẩm."
         }
       ],
       "expo-secure-store"

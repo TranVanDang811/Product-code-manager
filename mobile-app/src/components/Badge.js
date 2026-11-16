@@ -18,7 +18,7 @@ export default function Badge({ status, text }) {
         case 'NOT_FOUND':
           return { bg: 'rgba(244, 63, 94, 0.18)', text: '#fb7185', border: 'rgba(244, 63, 94, 0.45)', dot: '#f43f5e' };
         case 'INVALID':
-          return { bg: 'rgba(168, 85, 247, 0.18)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.45)', dot: '#a855f7' };
+          return { bg: 'rgba(245, 158, 11, 0.18)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.45)', dot: '#f59e0b' };
         default:
           return { bg: 'rgba(255, 255, 255, 0.08)', text: '#e2e8f0', border: 'rgba(255, 255, 255, 0.15)', dot: '#94a3b8' };
       }
@@ -34,7 +34,7 @@ export default function Badge({ status, text }) {
         case 'NOT_FOUND':
           return { bg: '#fff1f2', text: '#be123c', border: '#fecdd3', dot: '#f43f5e' };
         case 'INVALID':
-          return { bg: '#faf5ff', text: '#7e22ce', border: '#e9d5ff', dot: '#a855f7' };
+          return { bg: '#fffbeb', text: '#b45309', border: '#fde68a', dot: '#f59e0b' };
         default:
           return { bg: '#f8fafc', text: '#334155', border: '#e2e8f0', dot: '#94a3b8' };
       }

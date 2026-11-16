@@ -1,26 +1,35 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { dashboardApi } from '../api/dashboardApi';
+import { barcodeApi } from '../api/barcodeApi';
 import {
   Package,
   ScanLine,
   CheckCircle2,
-  AlertOctagon,
-  TrendingUp,
+  AlertTriangle,
   RefreshCw,
-  PlusCircle,
+  Plus,
   Clock,
-  ArrowRight,
+  TrendingUp,
+  Search,
+  Check,
+  Zap,
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { formatDateTime, formatDate } from '../utils/formatters';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Quick Barcode Test State
+  const [testBarcode, setTestBarcode] = useState('');
+  const [testResult, setTestResult] = useState(null);
+  const [testing, setTesting] = useState(false);
 
   const fetchStats = async (isManualRefresh = false) => {
     try {
@@ -44,6 +53,27 @@ export default function DashboardPage() {
     fetchStats();
   }, []);
 
+  const handleQuickTest = async (e) => {
+    e.preventDefault();
+    if (!testBarcode.trim()) return;
+    try {
+      setTesting(true);
+      const res = await barcodeApi.lookup({
+        barcode: testBarcode.trim(),
+        deviceInfo: 'Web Dashboard Quick Test',
+      });
+      setTestResult(res?.data || null);
+      fetchStats();
+    } catch (err) {
+      setTestResult({
+        status: 'INVALID',
+        message: err.message || 'Lỗi khi kiểm tra mã vạch',
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -54,14 +84,14 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="rounded-2xl bg-rose-50 border border-rose-200 p-6 text-center">
-        <AlertOctagon className="w-12 h-12 text-rose-500 mx-auto mb-3" />
-        <h3 className="text-base font-semibold text-rose-800">{error}</h3>
+      <div className="pcm-card p-8 text-center max-w-lg mx-auto">
+        <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-3" />
+        <h3 className="text-sm font-semibold text-rose-300">{error}</h3>
         <button
           onClick={() => fetchStats(true)}
-          className="mt-4 px-4 py-2 bg-rose-600 text-white rounded-xl text-sm font-medium hover:bg-rose-700 transition"
+          className="btn-primary mt-4 text-xs"
         >
-          Tải lại dữ liệu
+          Thử lại
         </button>
       </div>
     );
@@ -69,240 +99,316 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* 1. Dashboard Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tổng quan hệ thống</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Theo dõi tình trạng sản phẩm, mã vạch EAN-13 và lịch sử tra cứu
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Tổng quan hệ thống
+          </h1>
+          <p className="text-xs text-zinc-300 mt-1">
+            Bảng điều hành thời gian thực • Mã vạch GS1 EAN-13
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={() => fetchStats(true)}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm disabled:opacity-50"
+            className="btn-secondary text-xs py-2 px-3.5"
+            title="Làm mới số liệu"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Làm mới
+            <span>Làm mới</span>
           </button>
           <Link
             to="/products"
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition shadow-sm shadow-brand-500/20"
+            className="btn-secondary text-xs py-2 px-3.5"
           >
-            <PlusCircle className="w-3.5 h-3.5" />
-            Thêm sản phẩm
+            <Plus className="w-3.5 h-3.5" />
+            <span>Thêm sản phẩm</span>
           </Link>
           <Link
             to="/scanner"
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 rounded-xl hover:bg-brand-100 transition shadow-sm"
+            className="btn-primary text-xs py-2 px-4 shadow-sm"
           >
             <ScanLine className="w-3.5 h-3.5" />
-            Quét Barcode
+            <span>Quét mã vạch</span>
           </Link>
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      {/* 2. 4 Stat Metric Cards (Stealth Monochromatic Dark Gray) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Sản phẩm */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sản phẩm</span>
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-              <Package className="w-5 h-5" />
+        {/* Card 1: Tổng kho sản phẩm */}
+        <div className="pcm-card p-5 hover:border-zinc-600 transition duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Tổng sản phẩm
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center">
+              <Package className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-slate-900">{stats?.totalProducts || 0}</div>
-          <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium">
-              {stats?.activeProducts || 0} Hoạt động
+          <div className="text-3xl font-extrabold text-white tracking-tight">
+            {stats?.totalProducts || 0}
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-[11px]">
+            <span className="text-emerald-400 font-semibold px-2 py-0.5 rounded-md bg-emerald-950/50 border border-emerald-800/40">
+              {stats?.activeProducts || 0} hoạt động
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 font-medium">
-              {stats?.inactiveProducts || 0} Tạm ngưng
-            </span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
-              {stats?.archivedProducts || 0} Lưu trữ
+            <span className="text-amber-400 font-semibold px-2 py-0.5 rounded-md bg-amber-950/50 border border-amber-800/40">
+              {stats?.inactiveProducts || 0} tạm ngưng
             </span>
           </div>
         </div>
 
-        {/* Card 2: Tổng lượt tra cứu */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lượt quét</span>
-            <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-              <ScanLine className="w-5 h-5" />
+        {/* Card 2: Lượt quét Barcode */}
+        <div className="pcm-card p-5 hover:border-zinc-600 transition duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Lượt quét mã
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center">
+              <ScanLine className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-slate-900">{stats?.totalScans || 0}</div>
-          <p className="mt-3 text-xs text-slate-500 flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            Tổng lịch sử tra cứu đã ghi nhận
-          </p>
+          <div className="text-3xl font-extrabold text-zinc-100 tracking-tight">
+            {stats?.totalScans || 0}
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-zinc-400">
+            <Clock className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Đồng bộ tức thì Firebase</span>
+          </div>
         </div>
 
-        {/* Card 3: Tỷ lệ tìm thấy */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tỷ lệ thành công</span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <CheckCircle2 className="w-5 h-5" />
+        {/* Card 3: Tỷ lệ tìm thấy (Neon Emerald) */}
+        <div className="pcm-card p-5 hover:border-zinc-600 transition duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Tỷ lệ khớp mã
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-emerald-600">
+          <div className="text-3xl font-extrabold text-emerald-400 tracking-tight">
             {stats?.foundRate != null ? `${stats.foundRate}%` : '0%'}
           </div>
-          <p className="mt-3 text-xs text-slate-500">
-            {stats?.foundScans || 0} lượt tìm thấy sản phẩm hợp lệ
-          </p>
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-zinc-400">
+            <span className="font-bold text-emerald-400">
+              {stats?.foundScans || 0}
+            </span>
+            <span>lượt khớp dữ liệu chuẩn</span>
+          </div>
         </div>
 
-        {/* Card 4: Không tìm thấy & Lỗi */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chưa khớp / Sai mã</span>
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
-              <AlertOctagon className="w-5 h-5" />
+        {/* Card 4: Cảnh báo chưa khớp / Lỗi (Neon Rose) */}
+        <div className="pcm-card p-5 hover:border-zinc-600 transition duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+              Chưa khớp / Sai chuẩn
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-rose-950/70 text-rose-400 border border-rose-800/60 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-rose-600">
+          <div className="text-3xl font-extrabold text-rose-400 tracking-tight">
             {(stats?.notFoundScans || 0) + (stats?.invalidScans || 0)}
           </div>
-          <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="text-slate-500">{stats?.notFoundScans || 0} Chưa có trong DB</span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-500">{stats?.invalidScans || 0} Sai format</span>
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-400">
+            <span className="text-amber-400 font-medium">{stats?.notFoundScans || 0} chưa gán</span>
+            <span>•</span>
+            <span className="text-rose-400 font-medium">{stats?.invalidScans || 0} sai GS1</span>
           </div>
         </div>
       </div>
 
-      {/* 7-Day Trend Chart & Statistics Breakdown */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-brand-600" />
-            <h2 className="text-base font-bold text-slate-900">Xu hướng tra cứu trong 7 ngày gần nhất</h2>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span>Tìm thấy (FOUND)</span>
+      {/* 3. Quick Barcode Test Card (Real-Time Modulo-10 Tester) */}
+      <div className="pcm-card p-5">
+        <div className="flex items-center justify-between pb-3 border-b border-[#27272a]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 flex items-center justify-center">
+              <Zap className="w-4 h-4" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-rose-400" />
-              <span>Không thấy (NOT_FOUND)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-purple-400" />
-              <span>Sai chuẩn (INVALID)</span>
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                Kiểm tra mã vạch siêu tốc (GS1 Modulo-10)
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Nhập 13 số để phân tích Check Digit và tra cứu tức thì thông tin sản phẩm
+              </p>
             </div>
           </div>
+          <span className="hidden sm:inline-flex text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+            ACTIVE
+          </span>
         </div>
 
-        {/* Daily Breakdown Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {stats?.dailyScanStats?.map((day) => {
-            const maxVal = Math.max(
-              ...stats.dailyScanStats.map((d) => d.total),
-              1
-            );
-            const heightPercent = Math.round((day.total / maxVal) * 100);
-
-            return (
-              <div
-                key={day.date}
-                className="flex flex-col items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-brand-200 transition"
-              >
-                <div className="text-xs font-semibold text-slate-600 mb-2">
-                  {formatDate(day.date)}
-                </div>
-
-                {/* Progress Visual Bar */}
-                <div className="w-full h-24 flex items-end justify-center gap-1 my-2">
-                  <div
-                    className="w-8 rounded-t-lg bg-gradient-to-t from-brand-500 to-indigo-400 transition-all duration-500"
-                    style={{ height: `${Math.max(heightPercent, 8)}%` }}
-                    title={`Tổng: ${day.total}`}
-                  />
-                </div>
-
-                <div className="w-full text-center border-t border-slate-200 pt-2 mt-1">
-                  <div className="text-sm font-bold text-slate-800">{day.total} lượt</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
-                    +{day.found} | -{day.notFound} | !{day.invalid}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 10 Recent Scans */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">10 lượt tra cứu gần nhất</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Lịch sử quét barcode thời gian thực</p>
+        <form onSubmit={handleQuickTest} className="mt-4 flex flex-col sm:flex-row gap-2.5">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
+              <ScanLine className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={testBarcode}
+              onChange={(e) => setTestBarcode(e.target.value)}
+              placeholder="Nhập 13 chữ số mã vạch EAN-13 (VD: 8935001700018)..."
+              maxLength={13}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1c1c1f] border border-[#27272a] font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 transition"
+            />
           </div>
-          <Link
-            to="/history"
-            className="flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 transition"
+          <button
+            type="submit"
+            disabled={testing || !testBarcode.trim()}
+            className="btn-primary text-xs py-2.5 px-5 disabled:opacity-50"
           >
-            Xem tất cả lịch sử
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+            {testing ? <LoadingSpinner size="sm" className="text-zinc-900" /> : <Search className="w-4 h-4" />}
+            <span>Kiểm tra</span>
+          </button>
+        </form>
+
+        {testResult && (
+          <div className="mt-4 p-3.5 rounded-xl bg-[#18181b] border border-[#27272a] transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2.5">
+                <Badge status={testResult.status} />
+                <span className="font-mono font-bold text-white">
+                  {testResult.barcodeScanned || testBarcode}
+                </span>
+                <span className="text-zinc-400">• {testResult.message}</span>
+              </div>
+
+              {testResult.product && (
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-xs font-bold text-zinc-200 bg-zinc-800 px-2 py-0.5 rounded-lg border border-zinc-700">
+                    #{testResult.product.productCode}
+                  </span>
+                  <span className="font-semibold text-white truncate max-w-xs">
+                    {testResult.product.name}
+                  </span>
+                  <button
+                    onClick={() => navigate('/products')}
+                    className="text-zinc-300 hover:text-white underline font-semibold text-xs ml-1"
+                  >
+                    Xem chi tiết →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 4. 7-Day Frequency Visualizer & Recent Scans */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 7-Day Bar Chart */}
+        <div className="pcm-card p-5 lg:col-span-1 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4 text-zinc-400" />
+              <h2 className="text-sm font-bold text-white">
+                Hoạt động 7 ngày gần nhất
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-400 mb-5">
+              Lưu lượng quét và kết quả đối soát
+            </p>
+
+            <div className="space-y-3">
+              {stats?.scansByDay && stats.scansByDay.length > 0 ? (
+                stats.scansByDay.slice(-7).map((item, idx) => {
+                  const maxCount = Math.max(...stats.scansByDay.map((d) => d.count), 1);
+                  const pct = Math.round((item.count / maxCount) * 100);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-zinc-400">{formatDate(item.date)}</span>
+                        <span className="font-bold text-white">{item.count} lượt</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[#1c1c1f] overflow-hidden">
+                        <div
+                          className="h-full bg-zinc-300 rounded-full transition-all duration-500 shadow-sm"
+                          style={{ width: `${Math.max(pct, 5)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-8 text-center text-xs text-zinc-500">
+                  Chưa có dữ liệu thống kê tuần
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                <th className="py-3 px-4">Thời gian</th>
-                <th className="py-3 px-4">Barcode đã quét</th>
-                <th className="py-3 px-4">Kết quả</th>
-                <th className="py-3 px-4">Mã SP</th>
-                <th className="py-3 px-4">Tên sản phẩm</th>
-                <th className="py-3 px-4">Thiết bị</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {stats?.recentScans?.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="py-8 text-center text-xs text-slate-400">
-                    Chưa có lượt quét mã vạch nào được ghi nhận.
-                  </td>
+        {/* Recent Scans Table */}
+        <div className="pcm-card p-5 lg:col-span-2">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#27272a]">
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                Lượt quét gần đây
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Nhật ký quét mã mới nhất trên hệ thống
+              </p>
+            </div>
+            <Link
+              to="/history"
+              className="text-xs font-semibold text-zinc-300 hover:text-white underline"
+            >
+              Xem tất cả →
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider border-b border-[#27272a]">
+                  <th className="py-2.5 px-3">Mã vạch</th>
+                  <th className="py-2.5 px-3">Sản phẩm</th>
+                  <th className="py-2.5 px-3">Kết quả</th>
+                  <th className="py-2.5 px-3 text-right">Thời gian</th>
                 </tr>
-              ) : (
-                stats?.recentScans?.map((scan) => (
-                  <tr key={scan.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                      {formatDateTime(scan.scannedAt)}
-                    </td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-900">
-                      {scan.barcodeScanned}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge status={scan.status} />
-                    </td>
-                    <td className="py-3 px-4 font-mono font-semibold text-brand-600">
-                      {scan.productCode || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-slate-700 max-w-xs truncate">
-                      {scan.productName || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-400 truncate max-w-[150px]">
-                      {scan.deviceInfo || '-'}
+              </thead>
+              <tbody className="divide-y divide-[#27272a]">
+                {!stats?.recentScans || stats.recentScans.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="py-8 text-center text-zinc-400">
+                      Chưa có lịch sử quét nào
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  stats.recentScans.slice(0, 7).map((scan) => (
+                    <tr key={scan.id} className="hover:bg-[#27272a] transition-colors">
+                      <td className="py-2.5 px-3 font-mono font-bold text-white">
+                        {scan.barcodeScanned}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {scan.product ? (
+                          <span className="font-semibold text-white">
+                            {scan.product.name}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-400 italic">Chưa liên kết</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <Badge status={scan.status} />
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-zinc-300 whitespace-nowrap">
+                        {formatDateTime(scan.scannedAt)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

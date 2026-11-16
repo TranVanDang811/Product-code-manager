@@ -1,8 +1,5 @@
-import axiosClient from './axiosClient';
+import { firebaseService } from '../services/firebaseService';
 
 export const dashboardApi = {
-  getStats: () => {
-    return axiosClient.get('/dashboard/stats');
-  },
+  getStats: () => firebaseService.getStats(),
 };
-

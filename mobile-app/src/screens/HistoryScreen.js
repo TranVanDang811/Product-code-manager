@@ -99,7 +99,7 @@ export default function HistoryScreen() {
                   style={[
                     styles.chipText,
                     {
-                      color: isSelected ? '#ffffff' : colors.textSecondary,
+                      color: isSelected ? (colors.textOnPrimary || '#000000') : colors.textSecondary,
                       fontWeight: isSelected ? '700' : '600',
                     },
                   ]}

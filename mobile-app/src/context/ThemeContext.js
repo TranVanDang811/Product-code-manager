@@ -12,14 +12,15 @@ export const lightColors = {
   bgElevated: '#ffffff',
   border: '#e2e8f0',
   borderLight: '#f1f5f9',
-  borderAccent: '#c7d2fe',
+  borderAccent: '#93c5fd',
   textPrimary: '#0f172a',
   textSecondary: '#475569',
   textMuted: '#94a3b8',
-  primary: '#4f46e5',
-  primaryHover: '#4338ca',
-  primaryLight: '#eef2ff',
-  primaryBorder: '#c7d2fe',
+  primary: '#2563eb',
+  textOnPrimary: '#ffffff',
+  primaryHover: '#1d4ed8',
+  primaryLight: '#eff6ff',
+  primaryBorder: '#bfdbfe',
   accent: '#0284c7',
   accentLight: '#e0f2fe',
   accentGlow: 'rgba(2, 132, 199, 0.15)',
@@ -34,36 +35,37 @@ export const lightColors = {
   dangerBorder: '#fecdd3',
   tabBarBg: '#ffffff',
   tabBarBorder: '#e2e8f0',
-  tabBarActive: '#4f46e5',
+  tabBarActive: '#2563eb',
   tabBarInactive: '#94a3b8',
   headerBg: '#ffffff',
   headerBorder: '#e2e8f0',
   glassOverlay: 'rgba(15, 23, 42, 0.65)',
   glassCard: 'rgba(255, 255, 255, 0.92)',
   laserGlow: '#06b6d4',
-  viewfinderBorder: '#4f46e5',
+  viewfinderBorder: '#2563eb',
 };
 
 export const darkColors = {
   isDark: true,
-  bgPrimary: '#0a0e1a',       // Deep obsidian
-  bgSecondary: '#111827',     // Elevated card
-  bgCard: '#131d31',          // Card surface
-  bgTertiary: '#1e293b',      // Input & inner surface
-  bgElevated: '#1a233a',      // Modal / dropdown
-  border: '#1f293d',          // Border
-  borderLight: '#192237',
-  borderAccent: '#6366f1',
-  textPrimary: '#f8fafc',     // Crisp white
-  textSecondary: '#94a3b8',   // Muted silver
-  textMuted: '#64748b',       // Deep silver
-  primary: '#6366f1',         // Electric Indigo
-  primaryHover: '#818cf8',
-  primaryLight: 'rgba(99, 102, 241, 0.18)',
-  primaryBorder: 'rgba(99, 102, 241, 0.45)',
-  accent: '#06b6d4',          // Cyber Cyan
-  accentLight: 'rgba(6, 182, 212, 0.18)',
-  accentGlow: 'rgba(6, 182, 212, 0.35)',
+  bgPrimary: '#09090b',       // True Matte Black (Zinc 950)
+  bgSecondary: '#121214',     // Dark Charcoal
+  bgCard: '#18181b',          // Zinc 900 surface
+  bgTertiary: '#27272a',      // Zinc 800 input surface
+  bgElevated: '#18181b',      // Modal / dropdown
+  border: '#2e2e33',          // Border
+  borderLight: '#27272a',
+  borderAccent: '#52525b',
+  textPrimary: '#fafafa',     // Crisp white
+  textSecondary: '#a1a1aa',   // Muted silver
+  textMuted: '#71717a',       // Deep silver
+  primary: '#fafafa',         // Stealth Monochrome Off-White
+  textOnPrimary: '#000000',   // Pure Black on Primary Button
+  primaryHover: '#e4e4e7',
+  primaryLight: 'rgba(255, 255, 255, 0.1)',
+  primaryBorder: 'rgba(255, 255, 255, 0.25)',
+  accent: '#a1a1aa',          // Cool Platinum
+  accentLight: 'rgba(161, 161, 170, 0.18)',
+  accentGlow: 'rgba(255, 255, 255, 0.25)',
   success: '#10b981',         // Neon Emerald
   successLight: 'rgba(16, 185, 129, 0.18)',
   successBorder: 'rgba(16, 185, 129, 0.4)',
@@ -73,16 +75,16 @@ export const darkColors = {
   danger: '#f43f5e',          // Neon Rose
   dangerLight: 'rgba(244, 63, 94, 0.18)',
   dangerBorder: 'rgba(244, 63, 94, 0.4)',
-  tabBarBg: '#0d1322',
-  tabBarBorder: '#1c263d',
-  tabBarActive: '#818cf8',
-  tabBarInactive: '#64748b',
-  headerBg: '#0d1322',
-  headerBorder: '#1c263d',
+  tabBarBg: '#121214',
+  tabBarBorder: '#27272a',
+  tabBarActive: '#fafafa',
+  tabBarInactive: '#71717a',
+  headerBg: '#121214',
+  headerBorder: '#27272a',
   glassOverlay: 'rgba(0, 0, 0, 0.85)',
-  glassCard: 'rgba(19, 29, 49, 0.95)',
-  laserGlow: '#00f0ff',
-  viewfinderBorder: '#818cf8',
+  glassCard: 'rgba(24, 24, 27, 0.95)',
+  laserGlow: '#ffffff',
+  viewfinderBorder: '#a1a1aa',
 };
 
 const ThemeContext = createContext({

@@ -174,7 +174,7 @@ export default function AssignBarcodeScreen({ route, navigation }) {
             onPress={handleSave}
             activeOpacity={0.85}
           >
-            <Text style={styles.saveBtnText}>Lưu liên kết mã vạch</Text>
+            <Text style={[styles.saveBtnText, { color: colors.textOnPrimary || '#000000' }]}>Lưu liên kết mã vạch</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

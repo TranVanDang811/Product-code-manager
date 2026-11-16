@@ -14,9 +14,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { performLogin } from '../store/authSlice';
 import { useTheme } from '../context/ThemeContext';
-import { Lock, User, Server, Shield, Sparkles } from 'lucide-react-native';
+import { Lock, User, Database, Shield, Sparkles } from 'lucide-react-native';
 import LoadingOverlay from '../components/LoadingOverlay';
-import { API_BASE_URL } from '../api/config';
 
 export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -24,7 +23,7 @@ export default function LoginScreen({ navigation }) {
   const { loading, error } = useSelector((state) => state.auth);
 
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Admin@123');
+  const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
@@ -129,18 +128,18 @@ export default function LoginScreen({ navigation }) {
               onPress={handleLogin}
               activeOpacity={0.85}
             >
-              <Text style={styles.loginButtonText}>Đăng nhập quản trị</Text>
+              <Text style={[styles.loginButtonText, { color: colors.textOnPrimary || '#000000' }]}>Đăng nhập quản trị</Text>
             </TouchableOpacity>
 
             {/* Server Connection status */}
             <View style={[styles.serverInfo, { borderTopColor: colors.border }]}>
-              <Server size={14} color={colors.textMuted} />
+              <Database size={14} color="#f59e0b" />
               <Text
                 style={[styles.serverText, { color: colors.textMuted }]}
                 numberOfLines={1}
                 ellipsizeMode="middle"
               >
-                Máy chủ: {API_BASE_URL}
+                Cơ sở dữ liệu: Đồng bộ đám mây trực tuyến
               </Text>
             </View>
           </View>

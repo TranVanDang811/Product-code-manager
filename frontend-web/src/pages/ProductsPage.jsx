@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { productApi } from '../api/productApi';
 import { barcodeApi } from '../api/barcodeApi';
 import { addToast } from '../store/toastSlice';
@@ -12,13 +13,11 @@ import {
   Barcode as BarcodeIcon,
   Image as ImageIcon,
   Edit2,
-  Archive,
   Trash2,
   Upload,
   Check,
-  AlertCircle,
-  Eye,
-  Filter,
+  X,
+  Hash,
 } from 'lucide-react';
 import Badge from '../components/common/Badge';
 import Modal from '../components/common/Modal';
@@ -26,18 +25,25 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination from '../components/common/Pagination';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
+const STATUS_FILTERS = [
+  { key: '', label: 'Tất cả' },
+  { key: 'ACTIVE', label: 'Hoạt động' },
+  { key: 'INACTIVE', label: 'Tạm ngưng' },
+  { key: 'ARCHIVED', label: 'Lưu trữ' },
+];
+
 export default function ProductsPage() {
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Data state
   const [products, setProducts] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Filter & Pagination state
+  // Filters & Pagination
   const [page, setPage] = useState(0);
-  const [size] = useState(10);
+  const [size, setSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -46,7 +52,7 @@ export default function ProductsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Form states
@@ -54,12 +60,13 @@ export default function ProductsPage() {
     productCode: '',
     name: '',
     description: '',
+    barcode: '',
     status: 'ACTIVE',
   });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Barcode form state
+  // Barcode Assign state
   const [barcodeInput, setBarcodeInput] = useState('');
   const [barcodeError, setBarcodeError] = useState('');
 
@@ -67,6 +74,23 @@ export default function ProductsPage() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [createImagePreview, setCreateImagePreview] = useState('');
+
+  // Handle image select when creating product
+  const handleCreateImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      dispatch(addToast({ type: 'warning', message: 'Dung lượng ảnh tối đa 2MB' }));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCreateImagePreview(reader.result);
+      setFormData((prev) => ({ ...prev, imageUrl: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Fetch product list
   const fetchProducts = useCallback(async () => {
@@ -104,16 +128,27 @@ export default function ProductsPage() {
   }, [fetchProducts]);
 
   // Open Create Modal
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (presetBarcode = '') => {
     setFormData({
       productCode: '',
       name: '',
       description: '',
+      barcode: presetBarcode ? String(presetBarcode).trim() : '',
       status: 'ACTIVE',
+      imageUrl: null,
     });
+    setCreateImagePreview('');
     setFormErrors({});
     setIsCreateModalOpen(true);
   };
+
+  useEffect(() => {
+    const newBarcode = searchParams.get('newBarcode');
+    if (newBarcode) {
+      handleOpenCreateModal(newBarcode);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Open Edit Modal
   const handleOpenEditModal = (product) => {
@@ -144,10 +179,10 @@ export default function ProductsPage() {
     setIsImageModalOpen(true);
   };
 
-  // Open Archive Dialog
-  const handleOpenArchiveDialog = (product) => {
+  // Open Delete Dialog
+  const handleOpenDeleteDialog = (product) => {
     setSelectedProduct(product);
-    setIsArchiveDialogOpen(true);
+    setIsDeleteDialogOpen(true);
   };
 
   // Submit Create Product
@@ -160,6 +195,9 @@ export default function ProductsPage() {
     }
     if (!formData.name || formData.name.trim().length === 0) {
       errors.name = 'Tên sản phẩm không được để trống';
+    }
+    if (!formData.barcode || !isValidEan13(formData.barcode.trim())) {
+      errors.barcode = 'Mã vạch phải gồm đúng 13 số và thỏa mãn chuẩn GS1 Modulo-10 Checksum';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -203,14 +241,14 @@ export default function ProductsPage() {
     try {
       setIsSubmitting(true);
       await productApi.updateProduct(selectedProduct.id, {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         status: formData.status,
       });
       dispatch(
         addToast({
           type: 'success',
-          message: 'Cập nhật thông tin sản phẩm thành công!',
+          message: `Cập nhật sản phẩm [${selectedProduct.productCode}] thành công!`,
         })
       );
       setIsEditModalOpen(false);
@@ -228,8 +266,14 @@ export default function ProductsPage() {
     e.preventDefault();
     setBarcodeError('');
 
-    if (!barcodeInput || !isValidEan13(barcodeInput.trim())) {
-      setBarcodeError('Mã vạch phải gồm đúng 13 số và thỏa mãn checksum GS1 EAN-13');
+    const cleanBarcode = barcodeInput.trim();
+    if (!cleanBarcode) {
+      setBarcodeError('Vui lòng nhập mã vạch EAN-13');
+      return;
+    }
+
+    if (!isValidEan13(cleanBarcode)) {
+      setBarcodeError('Mã vạch phải gồm đúng 13 chữ số và hợp lệ theo chuẩn GS1 Modulo-10');
       return;
     }
 
@@ -237,18 +281,18 @@ export default function ProductsPage() {
       setIsSubmitting(true);
       await barcodeApi.assign({
         productId: selectedProduct.id,
-        barcode: barcodeInput.trim(),
+        barcode: cleanBarcode,
       });
       dispatch(
         addToast({
           type: 'success',
-          message: `Gán mã vạch EAN-13 [${barcodeInput.trim()}] thành công!`,
+          message: `Đã gán mã [${cleanBarcode}] cho sản phẩm thành công!`,
         })
       );
       setIsBarcodeModalOpen(false);
       fetchProducts();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Không thể gán barcode';
+      const msg = err.response?.data?.message || 'Lỗi khi gán mã barcode';
       setBarcodeError(msg);
       dispatch(addToast({ type: 'error', message: msg }));
     } finally {
@@ -307,7 +351,7 @@ export default function ProductsPage() {
     setImagePreview(URL.createObjectURL(file));
   };
 
-  // Upload Image to Cloudinary
+  // Upload Image to Firestore (base64)
   const handleUploadImageSubmit = async (e) => {
     e.preventDefault();
     if (!imageFile) {
@@ -321,7 +365,7 @@ export default function ProductsPage() {
       dispatch(
         addToast({
           type: 'success',
-          message: 'Tải ảnh lên Cloudinary thành công!',
+          message: 'Tải ảnh lên thành công!',
         })
       );
       setIsImageModalOpen(false);
@@ -343,7 +387,7 @@ export default function ProductsPage() {
       dispatch(
         addToast({
           type: 'success',
-          message: 'Đã xóa ảnh đại diện sản phẩm khỏi Cloudinary!',
+          message: 'Đã xóa ảnh đại diện sản phẩm!',
         })
       );
       setIsImageModalOpen(false);
@@ -356,72 +400,54 @@ export default function ProductsPage() {
     }
   };
 
-  // Soft delete / Archive
-  const handleArchiveConfirm = async () => {
+  // Permanent Delete Product
+  const handleDeleteConfirm = async () => {
     try {
       setIsSubmitting(true);
-      await productApi.archiveProduct(selectedProduct.id);
+      await productApi.deleteProduct(selectedProduct.id);
       dispatch(
         addToast({
           type: 'success',
-          message: `Đã lưu trữ sản phẩm [${selectedProduct.productCode}] thành công!`,
+          message: `Đã xóa vĩnh viễn sản phẩm [${selectedProduct.productCode} - ${selectedProduct.name}] thành công!`,
         })
       );
-      setIsArchiveDialogOpen(false);
+      setIsDeleteDialogOpen(false);
       fetchProducts();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Lỗi khi lưu trữ sản phẩm';
+      const msg = err.response?.data?.message || 'Lỗi khi xóa sản phẩm';
       dispatch(addToast({ type: 'error', message: msg }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Quick toggle status
-  const handleQuickStatusChange = async (product, newStatus) => {
-    try {
-      await productApi.updateProductStatus(product.id, newStatus);
-      dispatch(
-        addToast({
-          type: 'success',
-          message: `Đổi trạng thái sang [${newStatus}] thành công!`,
-        })
-      );
-      fetchProducts();
-    } catch (err) {
-      dispatch(
-        addToast({
-          type: 'error',
-          message: 'Không thể cập nhật trạng thái',
-        })
-      );
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header & Controls */}
+    <div className="space-y-5">
+      {/* Page Header (Synchronized with Mobile) */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Quản lý Sản phẩm</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Danh sách ánh xạ mã 6 số nội bộ và barcode EAN-13
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Danh mục sản phẩm
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Quản lý {totalElements} sản phẩm & mã EAN-13
           </p>
         </div>
+
         <button
-          onClick={handleOpenCreateModal}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition shadow-sm shadow-brand-500/20"
+          onClick={() => handleOpenCreateModal()}
+          className="btn-primary self-start sm:self-auto text-xs font-semibold py-2.5 px-4 shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          Thêm sản phẩm mới
+          <span>Thêm mới</span>
         </button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+      {/* Filter and Search Bar */}
+      <div className="pcm-card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Search Input */}
+        <div className="relative w-full md:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-3 text-zinc-500" />
           <input
             type="text"
             value={keyword}
@@ -430,107 +456,133 @@ export default function ProductsPage() {
               setPage(0);
             }}
             placeholder="Tìm theo tên hoặc mã 6 số..."
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-full pl-10 pr-9 py-2 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 transition"
           />
+          {keyword && (
+            <button
+              onClick={() => {
+                setKeyword('');
+                setPage(0);
+              }}
+              className="absolute right-3 top-2.5 text-zinc-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Status Dropdown */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            className="w-full md:w-48 bg-white border border-slate-200 text-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="ACTIVE">Hoạt động (ACTIVE)</option>
-            <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
-            <option value="ARCHIVED">Lưu trữ (ARCHIVED)</option>
-          </select>
+        {/* Filter Chips (Synchronized with Mobile STATUS_FILTERS) */}
+        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+          {STATUS_FILTERS.map((item) => {
+            const isSelected = statusFilter === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => {
+                  setStatusFilter(item.key);
+                  setPage(0);
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition ${
+                  isSelected
+                    ? 'bg-white text-black font-bold shadow-md'
+                    : 'bg-[#1c1c1f] hover:bg-[#27272a] text-zinc-200 border border-[#27272a]'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Products Table Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="pcm-card overflow-hidden">
         {loading ? (
-          <div className="py-20 flex justify-center">
+          <div className="py-24 flex justify-center">
             <LoadingSpinner size="lg" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <tr className="bg-[#18181b] text-[11px] font-bold text-zinc-300 uppercase tracking-wider border-b border-[#27272a]">
                   <th className="py-3 px-4">Ảnh</th>
-                  <th className="py-3 px-4">Mã nội bộ (6 số)</th>
+                  <th className="py-3 px-4">Mã số</th>
                   <th className="py-3 px-4">Tên sản phẩm</th>
-                  <th className="py-3 px-4">Mã vạch EAN-13</th>
+                  <th className="py-3 px-4">Mã vạch (EAN-13)</th>
                   <th className="py-3 px-4">Trạng thái</th>
                   <th className="py-3 px-4">Ngày tạo</th>
                   <th className="py-3 px-4 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-[#27272a] text-xs">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-12 text-center text-slate-400">
-                      Không tìm thấy sản phẩm nào phù hợp.
+                    <td colSpan="7" className="py-16 text-center text-zinc-400">
+                      <div className="flex flex-col items-center justify-center">
+                        <Package className="w-10 h-10 text-zinc-500 mb-2 stroke-[1.5]" />
+                        <span className="font-medium text-zinc-300">Không tìm thấy sản phẩm nào</span>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   products.map((product) => (
-                    <tr key={product.id} className="hover:bg-slate-50/70 transition">
+                    <tr
+                      key={product.id}
+                      className="border-b border-[#27272a]/70 even:bg-[#18181b]/60 hover:bg-[#27272a] transition-colors"
+                    >
                       {/* Image Thumbnail */}
                       <td className="py-3 px-4">
                         <button
                           onClick={() => handleOpenImageModal(product)}
-                          className="relative group w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center"
+                          className="relative group w-11 h-11 rounded-xl overflow-hidden bg-[#1c1c1f] border border-[#27272a] flex items-center justify-center shadow-sm"
                           title="Bấm để đổi ảnh"
                         >
                           {product.imageUrl ? (
                             <img
                               src={product.imageUrl}
                               alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                             />
                           ) : (
-                            <ImageIcon className="w-5 h-5 text-slate-400" />
+                            <Package className="w-5 h-5 text-zinc-400" />
                           )}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                            <Upload className="w-4 h-4 text-white" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <Upload className="w-3.5 h-3.5 text-white" />
                           </div>
                         </button>
                       </td>
 
-                      {/* Product Code */}
+                      {/* Product Code 6 Digits */}
                       <td className="py-3 px-4">
-                        <span className="font-mono font-bold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg text-sm border border-brand-200">
+                        <span className="inline-flex items-center gap-1 font-mono font-bold text-white bg-zinc-800 px-2 py-0.5 rounded-lg text-xs border border-zinc-700">
+                          <Hash className="w-3 h-3 text-zinc-300" />
                           {product.productCode}
                         </span>
                       </td>
 
                       {/* Name & Description */}
                       <td className="py-3 px-4 max-w-xs">
-                        <div className="font-medium text-slate-900 truncate">{product.name}</div>
+                        <div className="font-semibold text-white truncate">
+                          {product.name}
+                        </div>
                         {product.description && (
-                          <div className="text-xs text-slate-400 truncate">{product.description}</div>
+                          <div className="text-[11px] text-zinc-300 truncate mt-0.5">
+                            {product.description}
+                          </div>
                         )}
                       </td>
 
-                      {/* Barcode */}
+                      {/* Barcode EAN-13 */}
                       <td className="py-3 px-4">
                         {product.barcode ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded text-xs">
-                              {product.barcode}
-                            </span>
+                          <div className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-white">
+                            <BarcodeIcon className="w-3.5 h-3.5 text-zinc-300" />
+                            <span>{product.barcode}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-medium">
-                            Chưa gán
+                          <span className="text-[11px] text-zinc-400 italic">
+                            Chưa gán mã vạch
                           </span>
                         )}
                       </td>
@@ -541,18 +593,18 @@ export default function ProductsPage() {
                       </td>
 
                       {/* Created At */}
-                      <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
+                      <td className="py-3 px-4 text-[11px] text-zinc-300 whitespace-nowrap">
                         {formatDateTime(product.createdAt)}
                       </td>
 
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           {/* Assign Barcode Button */}
                           <button
                             onClick={() => handleOpenBarcodeModal(product)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
-                            title="Gán / Đổi Barcode"
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
+                            title="Gán / Đổi mã vạch"
                           >
                             <BarcodeIcon className="w-4 h-4" />
                           </button>
@@ -560,7 +612,7 @@ export default function ProductsPage() {
                           {/* Upload Image Button */}
                           <button
                             onClick={() => handleOpenImageModal(product)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"
                             title="Quản lý ảnh đại diện"
                           >
                             <ImageIcon className="w-4 h-4" />
@@ -569,22 +621,20 @@ export default function ProductsPage() {
                           {/* Edit Button */}
                           <button
                             onClick={() => handleOpenEditModal(product)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-950/40 transition"
                             title="Chỉnh sửa thông tin"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
 
-                          {/* Archive Button */}
-                          {product.status !== 'ARCHIVED' && (
-                            <button
-                              onClick={() => handleOpenArchiveDialog(product)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                              title="Lưu trữ (Soft Delete)"
-                            >
-                              <Archive className="w-4 h-4" />
-                            </button>
-                          )}
+                          {/* Permanent Delete Button */}
+                          <button
+                            onClick={() => handleOpenDeleteDialog(product)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition"
+                            title="Xóa vĩnh viễn sản phẩm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -612,8 +662,8 @@ export default function ProductsPage() {
       >
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Mã sản phẩm (6 chữ số) *
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+              Mã sản phẩm 6 số (VD: 001234) *
             </label>
             <input
               type="text"
@@ -624,21 +674,21 @@ export default function ProductsPage() {
                 setFormData({ ...formData, productCode: val });
               }}
               placeholder="VD: 001234"
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-500 ${
-                formErrors.productCode ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
+              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono tracking-wider bg-[#1c1c1f] text-white focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 ${
+                formErrors.productCode ? 'border-rose-400' : 'border-[#27272a]'
               }`}
             />
             {formErrors.productCode ? (
-              <p className="text-xs text-rose-600 mt-1">{formErrors.productCode}</p>
+              <p className="text-xs text-rose-400 mt-1">{formErrors.productCode}</p>
             ) : (
-              <p className="text-[11px] text-slate-400 mt-1">
-                Người dùng tự nhập đúng 6 chữ số, cho phép số 0 ở đầu (001234)
+              <p className="text-[11px] text-zinc-400 mt-1">
+                Cho phép 6 chữ số có số 0 ở đầu (VD: 000123, 001234)
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
               Tên sản phẩm *
             </label>
             <input
@@ -646,56 +696,101 @@ export default function ProductsPage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Nhập tên sản phẩm..."
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${
-                formErrors.name ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
+              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm bg-[#1c1c1f] text-white focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 ${
+                formErrors.name ? 'border-rose-400' : 'border-[#27272a]'
               }`}
             />
             {formErrors.name && (
-              <p className="text-xs text-rose-600 mt-1">{formErrors.name}</p>
+              <p className="text-xs text-rose-400 mt-1">{formErrors.name}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Mô tả chi tiết
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+              Mã vạch EAN-13 (13 chữ số) *
             </label>
-            <textarea
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Mô tả thông tin sản phẩm..."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
+            <div className="relative">
+              <BarcodeIcon className="w-4 h-4 absolute left-3 top-3 text-zinc-500" />
+              <input
+                type="text"
+                maxLength={13}
+                value={formData.barcode || ''}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+                  setFormData({ ...formData, barcode: val });
+                }}
+                placeholder="VD: 8935001700018"
+                className={`w-full pl-9 pr-3.5 py-2.5 rounded-xl border text-sm font-mono tracking-wider bg-[#1c1c1f] text-white focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500 ${
+                  formErrors.barcode ? 'border-rose-400' : 'border-[#27272a]'
+                }`}
+              />
+            </div>
+            {formErrors.barcode ? (
+              <p className="text-xs text-rose-400 mt-1">{formErrors.barcode}</p>
+            ) : formData.barcode?.length === 13 ? (
+              <p className="text-xs text-emerald-400 mt-1 flex items-center gap-1 font-medium">
+                <Check className="w-3.5 h-3.5" /> Mã vạch hợp lệ chuẩn GS1 Checksum
+              </p>
+            ) : null}
+          </div>
+
+          {/* Image Select */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+              Ảnh đại diện (Tùy chọn)
+            </label>
+            <div className="flex items-center gap-3">
+              {createImagePreview ? (
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#27272a]">
+                  <img src={createImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateImagePreview('');
+                      setFormData((prev) => ({ ...prev, imageUrl: null }));
+                    }}
+                    className="absolute top-1 right-1 p-0.5 bg-black/70 rounded-full text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : null}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleCreateImageChange}
+                className="text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 cursor-pointer"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Trạng thái ban đầu
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+              Mô tả quy cách
             </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
-              <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
-            </select>
+            <textarea
+              rows={2}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Ghi chú quy cách đóng gói, thông số..."
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-white text-xs focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500"
+            />
           </div>
 
-          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+          <div className="pt-3 flex justify-end gap-2.5 border-t border-[#27272a]">
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition"
+              className="btn-secondary text-xs py-2 px-4"
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition disabled:opacity-50"
+              className="btn-primary text-xs py-2 px-5 disabled:opacity-50"
             >
-              {isSubmitting ? 'Đang tạo...' : 'Tạo sản phẩm'}
+              {isSubmitting ? 'Đang lưu...' : 'Thêm sản phẩm'}
             </button>
           </div>
         </form>
@@ -705,74 +800,75 @@ export default function ProductsPage() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={`Chỉnh sửa sản phẩm [${selectedProduct?.productCode}]`}
+        title="Chỉnh sửa sản phẩm"
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">
-              Mã sản phẩm (Không thể thay đổi)
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Mã sản phẩm (Không thể đổi)
             </label>
             <input
               type="text"
               disabled
               value={formData.productCode}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-sm font-mono text-slate-500 cursor-not-allowed"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#18181b] text-zinc-400 font-mono text-xs cursor-not-allowed"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
               Tên sản phẩm *
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${
-                formErrors.name ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
-              }`}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500"
             />
+            {formErrors.name && (
+              <p className="text-xs text-rose-400 mt-1">{formErrors.name}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Mô tả chi tiết
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+              Mô tả
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-white text-xs focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
               Trạng thái
             </label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500"
             >
-              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
-              <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
-              <option value="ARCHIVED">Lưu trữ (ARCHIVED)</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="INACTIVE">Tạm ngưng</option>
+              <option value="ARCHIVED">Lưu trữ</option>
             </select>
           </div>
 
-          <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+          <div className="pt-3 flex justify-end gap-2.5 border-t border-[#27272a]">
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition"
+              className="btn-secondary text-xs py-2 px-4"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition disabled:opacity-50"
+              className="btn-primary text-xs py-2 px-5 disabled:opacity-50"
             >
               {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
@@ -780,54 +876,52 @@ export default function ProductsPage() {
         </form>
       </Modal>
 
-      {/* MODAL 3: ASSIGN BARCODE EAN-13 */}
+      {/* MODAL 3: ASSIGN BARCODE */}
       <Modal
         isOpen={isBarcodeModalOpen}
         onClose={() => setIsBarcodeModalOpen(false)}
-        title={`Gán Barcode cho [${selectedProduct?.productCode}] - ${selectedProduct?.name}`}
+        title="Gán mã vạch EAN-13"
       >
         <form onSubmit={handleBarcodeSubmit} className="space-y-4">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-            <div>• Barcode phải có chính xác 13 chữ số.</div>
-            <div>• Phải vượt qua thuật toán GS1 Modulo 10 Checksum.</div>
-            <div>• Quan hệ 1 - 1: mỗi barcode chỉ thuộc 1 sản phẩm duy nhất.</div>
+          <div className="p-3.5 rounded-xl bg-[#18181b] border border-[#27272a]">
+            <span className="text-[11px] text-zinc-400 font-semibold block">Sản phẩm áp dụng:</span>
+            <div className="font-semibold text-xs text-white mt-0.5">
+              #{selectedProduct?.productCode} - {selectedProduct?.name}
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              Mã Barcode EAN-13 (13 số) *
+            <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
+              Mã vạch EAN-13 mới (13 chữ số)
             </label>
-            <input
-              type="text"
-              maxLength={13}
-              value={barcodeInput}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '');
-                setBarcodeInput(val);
-                setBarcodeError('');
-              }}
-              placeholder="VD: 4006381333931"
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-500 ${
-                barcodeError ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
-              }`}
-            />
+            <div className="relative">
+              <BarcodeIcon className="w-4 h-4 absolute left-3 top-3 text-zinc-500" />
+              <input
+                type="text"
+                maxLength={13}
+                value={barcodeInput}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+                  setBarcodeInput(val);
+                }}
+                placeholder="Nhập 13 số barcode GS1..."
+                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-[#27272a] bg-[#1c1c1f] text-white font-mono text-xs tracking-wider focus:outline-none focus:ring-2 focus:ring-zinc-500/20 focus:border-zinc-500"
+              />
+            </div>
             {barcodeError && (
-              <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {barcodeError}
-              </p>
+              <p className="text-xs text-rose-400 mt-1">{barcodeError}</p>
             )}
           </div>
 
-          <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-between border-t border-[#27272a]">
             {selectedProduct?.barcode ? (
               <button
                 type="button"
                 onClick={handleUnassignBarcode}
                 disabled={isSubmitting}
-                className="px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                className="text-xs font-semibold text-rose-400 hover:underline"
               >
-                Hủy gán Barcode
+                Hủy gán mã vạch hiện tại
               </button>
             ) : <div />}
 
@@ -835,67 +929,55 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setIsBarcodeModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition"
+                className="btn-secondary text-xs py-2 px-3.5"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition disabled:opacity-50"
+                disabled={isSubmitting || !barcodeInput.trim()}
+                className="btn-primary text-xs py-2 px-4 disabled:opacity-50"
               >
-                {isSubmitting ? 'Đang lưu...' : 'Gán mã vạch'}
+                {isSubmitting ? 'Đang gán...' : 'Gán mã vạch'}
               </button>
             </div>
           </div>
         </form>
       </Modal>
 
-      {/* MODAL 4: IMAGE UPLOAD (CLOUDINARY) */}
+      {/* MODAL 4: IMAGE UPLOAD MODAL */}
       <Modal
         isOpen={isImageModalOpen}
         onClose={() => setIsImageModalOpen(false)}
-        title={`Ảnh đại diện [${selectedProduct?.productCode}]`}
+        title="Ảnh đại diện sản phẩm"
       >
         <form onSubmit={handleUploadImageSubmit} className="space-y-4">
-          <div className="flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-[#27272a] rounded-2xl bg-[#18181b]">
             {imagePreview ? (
-              <div className="relative w-48 h-48 rounded-2xl overflow-hidden border-2 border-slate-200 shadow-sm mb-3">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-36 h-36 rounded-xl overflow-hidden border border-[#27272a] shadow-sm mb-3">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <div className="w-48 h-48 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center p-4 text-center text-slate-400 mb-3 bg-slate-50">
-                <ImageIcon className="w-12 h-12 mb-2 text-slate-300" />
-                <span className="text-xs">Chưa có ảnh đại diện</span>
-              </div>
+              <ImageIcon className="w-12 h-12 text-zinc-500 mb-2" />
             )}
 
-            <label className="cursor-pointer px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
-              <span>Chọn ảnh mới từ máy tính</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-            <p className="text-[11px] text-slate-400 mt-1">Định dạng JPG, PNG, WEBP (Tối đa 5MB)</p>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleFileChange}
+              className="text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 cursor-pointer"
+            />
           </div>
 
-          <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-between border-t border-[#27272a]">
             {selectedProduct?.imageUrl ? (
               <button
                 type="button"
                 onClick={handleDeleteImage}
                 disabled={isUploadingImage}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                className="text-xs font-semibold text-rose-400 hover:underline"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Xóa ảnh hiện tại
+                Xóa ảnh đại diện
               </button>
             ) : <div />}
 
@@ -903,7 +985,7 @@ export default function ProductsPage() {
               <button
                 type="button"
                 onClick={() => setIsImageModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition"
+                className="btn-secondary text-xs py-2 px-3.5"
               >
                 Đóng
               </button>
@@ -911,10 +993,9 @@ export default function ProductsPage() {
                 <button
                   type="submit"
                   disabled={isUploadingImage}
-                  className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition disabled:opacity-50"
+                  className="btn-primary text-xs py-2 px-4 disabled:opacity-50"
                 >
-                  <Upload className="w-4 h-4" />
-                  {isUploadingImage ? 'Đang tải lên...' : 'Lưu ảnh Cloudinary'}
+                  {isUploadingImage ? 'Đang lưu...' : 'Lưu ảnh'}
                 </button>
               )}
             </div>
@@ -922,18 +1003,17 @@ export default function ProductsPage() {
         </form>
       </Modal>
 
-      {/* CONFIRM ARCHIVE DIALOG */}
+      {/* CONFIRM PERMANENT DELETE DIALOG */}
       <ConfirmDialog
-        isOpen={isArchiveDialogOpen}
-        onClose={() => setIsArchiveDialogOpen(false)}
-        onConfirm={handleArchiveConfirm}
-        title="Lưu trữ sản phẩm"
-        message={`Bạn có chắc chắn muốn chuyển sản phẩm [${selectedProduct?.productCode} - ${selectedProduct?.name}] sang trạng thái ARCHIVED (Lưu trữ) không? Hành động này tuân thủ nguyên tắc không xóa vật lý dữ liệu.`}
-        confirmText="Lưu trữ sản phẩm"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Xóa vĩnh viễn sản phẩm ⚠️"
+        message={`Bạn có chắc chắn muốn XÓA HOÀN TOÀN sản phẩm [${selectedProduct?.productCode} - ${selectedProduct?.name}] khỏi cơ sở dữ liệu? Dữ liệu sản phẩm sẽ bị xóa vĩnh viễn và mã vạch ${selectedProduct?.barcode ? '[' + selectedProduct.barcode + ']' : ''} sẽ được giải phóng hoàn toàn. Thao tác này KHÔNG THỂ hoàn tác!`}
+        confirmText="Xóa vĩnh viễn"
         isDanger={true}
         isLoading={isSubmitting}
       />
     </div>
   );
 }
-

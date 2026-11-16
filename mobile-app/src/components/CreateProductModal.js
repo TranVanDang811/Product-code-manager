@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { productApi } from '../api/productApi';
 import { isValidEan13, isValidProductCode } from '../utils/ean13Validator';
 import { useTheme } from '../context/ThemeContext';
@@ -23,6 +25,9 @@ import {
   Sparkles,
   CheckCircle2,
   AlertTriangle,
+  Camera,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react-native';
 
 export default function CreateProductModal({
@@ -34,20 +39,24 @@ export default function CreateProductModal({
   const { colors } = useTheme();
   const [productCode, setProductCode] = useState('');
   const [name, setName] = useState('');
-  const [barcode, setBarcode] = useState('');
+  const [barcode, setBarcode] = useState(initialBarcode ? String(initialBarcode).trim() : '');
   const [description, setDescription] = useState('');
+  const [imageUri, setImageUri] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (visible) {
-      setBarcode(initialBarcode ? String(initialBarcode).trim() : '');
+      let cleanInitial = initialBarcode ? String(initialBarcode).trim() : '';
+      if (cleanInitial.length === 12 && isValidEan13('0' + cleanInitial)) {
+        cleanInitial = '0' + cleanInitial;
+      }
+      setBarcode(cleanInitial);
       setName('');
       setDescription('');
+      setImageUri(null);
       setErrors({});
-      if (!productCode) {
-        generateRandomCode();
-      }
+      generateRandomCode();
     }
   }, [visible, initialBarcode]);
 
@@ -57,11 +66,78 @@ export default function CreateProductModal({
     setErrors((prev) => ({ ...prev, productCode: null }));
   };
 
-  const isBarcodeValid = barcode ? isValidEan13(barcode) : true;
+  const isBarcodeValid = isValidEan13(barcode);
   const isCodeValid = isValidProductCode(productCode);
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Cần cấp quyền', 'Vui lòng cấp quyền truy cập Camera để chụp ảnh sản phẩm.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType || 'image/jpeg';
+        const base64Data = `data:${mime};base64,${asset.base64}`;
+        setImageUri(base64Data);
+      }
+    } catch (err) {
+      Alert.alert('Lỗi chụp ảnh', err.message || 'Không thể mở Camera.');
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Cần cấp quyền', 'Vui lòng cấp quyền truy cập Thư viện ảnh để chọn ảnh đại diện.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType || 'image/jpeg';
+        const base64Data = `data:${mime};base64,${asset.base64}`;
+        setImageUri(base64Data);
+      }
+    } catch (err) {
+      Alert.alert('Lỗi chọn ảnh', err.message || 'Không thể mở thư viện ảnh.');
+    }
+  };
 
   const handleSubmit = async () => {
     const newErrors = {};
+
+    let cleanBarcode = barcode ? barcode.trim() : '';
+    if (cleanBarcode.length === 12 && isValidEan13('0' + cleanBarcode)) {
+      cleanBarcode = '0' + cleanBarcode;
+    }
+
+    if (!cleanBarcode) {
+      newErrors.barcode = 'Mã vạch 13 số là bắt buộc (vui lòng quét hoặc nhập mã)';
+    } else if (cleanBarcode.length !== 13) {
+      newErrors.barcode = 'Mã vạch phải gồm chính xác 13 chữ số';
+    } else if (!isValidEan13(cleanBarcode)) {
+      newErrors.barcode = 'Mã vạch sai Checksum GS1 Modulo-10 (vui lòng kiểm tra lại số cuối)';
+    }
 
     if (!productCode || !isValidProductCode(productCode)) {
       newErrors.productCode = 'Mã nội bộ phải gồm đúng 6 chữ số (VD: 001234)';
@@ -69,10 +145,6 @@ export default function CreateProductModal({
 
     if (!name.trim()) {
       newErrors.name = 'Tên sản phẩm không được để trống';
-    }
-
-    if (barcode && !isValidEan13(barcode)) {
-      newErrors.barcode = 'Mã vạch phải đúng 13 số và thỏa mãn Modulo-10 Checksum';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -86,7 +158,8 @@ export default function CreateProductModal({
         productCode: productCode.trim(),
         name: name.trim(),
         description: description.trim() || undefined,
-        barcode: barcode.trim() || undefined,
+        barcode: cleanBarcode,
+        imageUrl: imageUri || null,
         status: 'ACTIVE',
       };
 
@@ -240,7 +313,7 @@ export default function CreateProductModal({
             {/* Field 3: Mã vạch EAN-13 */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.textPrimary }]}>
-                Mã vạch EAN-13 (Tùy chọn)
+                Mã vạch EAN-13 (13 số) <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.barcodeInputWrapper}>
                 <Barcode
@@ -301,7 +374,63 @@ export default function CreateProductModal({
               ) : null}
             </View>
 
-            {/* Field 4: Mô tả chi tiết */}
+            {/* Field 4: Ảnh đại diện sản phẩm */}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>
+                Ảnh đại diện sản phẩm (Tùy chọn)
+              </Text>
+
+              {imageUri ? (
+                <View style={[styles.imagePreviewContainer, { borderColor: colors.primary }]}>
+                  <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => setImageUri(null)}
+                    activeOpacity={0.8}
+                  >
+                    <Trash2 size={16} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.imageActionRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.imageActionBtn,
+                      {
+                        backgroundColor: colors.bgTertiary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={handleTakePhoto}
+                    activeOpacity={0.8}
+                  >
+                    <Camera size={18} color={colors.primary} />
+                    <Text style={[styles.imageActionText, { color: colors.textPrimary }]}>
+                      Chụp ảnh trực tiếp
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.imageActionBtn,
+                      {
+                        backgroundColor: colors.bgTertiary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={handlePickImage}
+                    activeOpacity={0.8}
+                  >
+                    <ImageIcon size={18} color={colors.accent} />
+                    <Text style={[styles.imageActionText, { color: colors.textPrimary }]}>
+                      Chọn từ thư viện
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Field 5: Mô tả chi tiết */}
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.textPrimary }]}>Mô tả chi tiết</Text>
               <TextInput
@@ -345,11 +474,11 @@ export default function CreateProductModal({
               activeOpacity={0.85}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={colors.textOnPrimary || '#000000'} />
               ) : (
                 <>
-                  <Plus size={16} color="#ffffff" strokeWidth={2.5} />
-                  <Text style={styles.submitBtnText}>Tạo sản phẩm</Text>
+                  <Plus size={16} color={colors.textOnPrimary || '#000000'} strokeWidth={2.5} />
+                  <Text style={[styles.submitBtnText, { color: colors.textOnPrimary || '#000000' }]}>Tạo sản phẩm</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -493,6 +622,47 @@ const styles = StyleSheet.create({
   },
   checksumInvalidText: {
     fontSize: 11,
+    fontWeight: '700',
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 160,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1.5,
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  imageActionBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  imageActionText: {
+    fontSize: 13,
     fontWeight: '700',
   },
   actionsRow: {

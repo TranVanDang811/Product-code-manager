@@ -1,12 +1,6 @@
-import axiosClient from './axiosClient';
+import { firebaseService } from '../services/firebaseService';
 
 export const scanHistoryApi = {
-  getHistories: (params = {}) => {
-    return axiosClient.get('/scan-histories', { params });
-  },
-
-  getHistoryById: (id) => {
-    return axiosClient.get(`/scan-histories/${id}`);
-  },
+  getHistories: (params = {}) => firebaseService.getScanHistories(params),
+  getHistoryById: (id) => firebaseService.getHistoryById(id),
 };
-

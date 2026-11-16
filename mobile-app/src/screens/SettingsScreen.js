@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Alert,
   ScrollView,
@@ -11,23 +10,21 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { performLogout } from '../store/authSlice';
-import { API_BASE_URL, CLOUDFLARE_TUNNEL_URL, LOCAL_LAN_URL, setCustomApiUrl } from '../api/config';
 import { useTheme } from '../context/ThemeContext';
 import Header from '../components/Header';
-import axios from 'axios';
+import { firebaseService } from '../services/firebaseService';
 import {
   User,
-  Server,
   LogOut,
   CheckCircle,
   RefreshCw,
-  Globe,
-  Wifi,
   Sun,
   Moon,
   Shield,
   Palette,
   Info,
+  Sparkles,
+  Database,
 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
@@ -35,56 +32,23 @@ export default function SettingsScreen() {
   const user = useSelector((state) => state.auth.user);
   const { theme, isDark, setTheme, colors } = useTheme();
 
-  const [apiUrl, setApiUrl] = useState(API_BASE_URL);
-  const [testing, setTesting] = useState(false);
-  const [testSuccess, setTestSuccess] = useState(null);
+  const [firebaseTesting, setFirebaseTesting] = useState(false);
+  const [firebaseSuccess, setFirebaseSuccess] = useState(null);
 
-  const handleSelectPreset = async (url) => {
-    setApiUrl(url);
-    setTestSuccess(null);
+  const handleTestFirebase = async () => {
     try {
-      const saved = await setCustomApiUrl(url);
-      setApiUrl(saved);
-      Alert.alert('Đã chọn cấu hình', `Đã chuyển sang: ${url.includes('trycloudflare') ? 'Đường hầm Cloudflare' : 'Mạng WiFi nội bộ'}`);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleTestConnection = async () => {
-    try {
-      setTesting(true);
-      setTestSuccess(null);
-      let target = apiUrl.trim();
-      if (!target.endsWith('/api/v1')) {
-        target = target.replace(/\/+$/, '') + '/api/v1';
-      }
-      const res = await axios.get(`${target}/health`, { timeout: 6000 });
-      if (res.data?.success) {
-        setTestSuccess(true);
-        Alert.alert('Thành công', 'Kết nối đến máy chủ Backend Spring Boot thành công!');
-      } else {
-        setTestSuccess(false);
-        Alert.alert('Cảnh báo', 'Máy chủ phản hồi nhưng không đúng cấu trúc.');
-      }
-    } catch (err) {
-      setTestSuccess(false);
+      setFirebaseTesting(true);
+      const res = await firebaseService.getProducts({ size: 1 });
+      setFirebaseSuccess(true);
       Alert.alert(
-        'Lỗi kết nối',
-        `Không thể kết nối đến máy chủ tại: ${apiUrl}\nKiểm tra lại đường dẫn và tình trạng máy chủ.`
+        'Kết nối ổn định 🔥',
+        `Đã kết nối thành công với cơ sở dữ liệu đám mây!\nTổng số sản phẩm trong kho: ${res.data.totalElements || res.data.content?.length || 0}`
       );
+    } catch (err) {
+      setFirebaseSuccess(false);
+      Alert.alert('Lỗi kết nối', err.message || 'Không thể kết nối đến cơ sở dữ liệu.');
     } finally {
-      setTesting(false);
-    }
-  };
-
-  const handleSaveApiUrl = async () => {
-    try {
-      const saved = await setCustomApiUrl(apiUrl);
-      setApiUrl(saved);
-      Alert.alert('Đã lưu cấu hình', `Địa chỉ máy chủ mới: ${saved}`);
-    } catch {
-      Alert.alert('Lỗi', 'Không thể lưu cấu hình địa chỉ máy chủ.');
+      setFirebaseTesting(false);
     }
   };
 
@@ -176,18 +140,18 @@ export default function SettingsScreen() {
               onPress={() => setTheme('dark')}
               activeOpacity={0.8}
             >
-              <View style={[styles.themeIconCircle, { backgroundColor: '#0a0e1a' }]}>
-                <Moon size={20} color="#00f0ff" />
+              <View style={[styles.themeIconCircle, { backgroundColor: '#09090b', borderColor: '#2e2e33', borderWidth: 1 }]}>
+                <Moon size={20} color="#fafafa" />
               </View>
               <Text style={[styles.themeBtnTitle, { color: colors.textPrimary }]}>
                 🌙 Chế độ Tối
               </Text>
               <Text style={[styles.themeBtnDesc, { color: colors.textSecondary }]}>
-                Titanium Dark Neon
+                Đen xám tối giản
               </Text>
               {isDark && (
                 <View style={[styles.activeCheck, { backgroundColor: colors.primary }]}>
-                  <CheckCircle size={14} color="#ffffff" />
+                  <CheckCircle size={14} color="#09090b" />
                 </View>
               )}
             </TouchableOpacity>
@@ -223,173 +187,57 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* 3. Server IP Config Card */}
+        {/* 3. Cơ sở dữ liệu Card (Chỉ kiểm tra kết nối) */}
         <View
           style={[
             styles.card,
             {
               backgroundColor: colors.bgCard,
-              borderColor: colors.border,
+              borderColor: '#f59e0b',
+              borderWidth: 1.5,
             },
           ]}
         >
           <View style={styles.cardTitleRow}>
-            <Server size={18} color={colors.accent} />
+            <Sparkles size={18} color="#f59e0b" />
             <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-              Cấu hình kết nối máy chủ Backend
+              🔥 Trạng thái Cơ sở dữ liệu
             </Text>
           </View>
           <Text style={[styles.cardHint, { color: colors.textSecondary }]}>
-            Chọn chế độ kết nối mạng cho điện thoại của bạn:
+            Kiểm tra trạng thái kết nối và đồng bộ dữ liệu trực tuyến với cơ sở dữ liệu đám mây.
           </Text>
 
-          {/* Quick Preset Buttons */}
-          <View style={styles.presetContainer}>
-            <TouchableOpacity
-              style={[
-                styles.presetBtn,
-                {
-                  backgroundColor: colors.bgTertiary,
-                  borderColor: apiUrl.includes('trycloudflare.com')
-                    ? colors.primary
-                    : colors.border,
-                  borderWidth: apiUrl.includes('trycloudflare.com') ? 1.5 : 1,
-                },
-              ]}
-              onPress={() => handleSelectPreset(CLOUDFLARE_TUNNEL_URL)}
-            >
-              <Globe
-                size={18}
-                color={apiUrl.includes('trycloudflare.com') ? colors.primary : colors.textSecondary}
-              />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.presetTitle,
-                    {
-                      color: apiUrl.includes('trycloudflare.com')
-                        ? colors.primary
-                        : colors.textPrimary,
-                    },
-                  ]}
-                >
-                  🌐 Từ xa (4G/5G/WiFi khác)
-                </Text>
-                <Text style={[styles.presetSubtitle, { color: colors.textSecondary }]}>
-                  Cloudflare Tunnel HTTPS
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.presetBtn,
-                {
-                  backgroundColor: colors.bgTertiary,
-                  borderColor: apiUrl.includes('192.168.')
-                    ? colors.primary
-                    : colors.border,
-                  borderWidth: apiUrl.includes('192.168.') ? 1.5 : 1,
-                },
-              ]}
-              onPress={() => handleSelectPreset(LOCAL_LAN_URL)}
-            >
-              <Wifi
-                size={18}
-                color={apiUrl.includes('192.168.') ? colors.primary : colors.textSecondary}
-              />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.presetTitle,
-                    {
-                      color: apiUrl.includes('192.168.')
-                        ? colors.primary
-                        : colors.textPrimary,
-                    },
-                  ]}
-                >
-                  🏠 Nội bộ WiFi nhà (LAN)
-                </Text>
-                <Text style={[styles.presetSubtitle, { color: colors.textSecondary }]}>
-                  192.168.100.137:8080
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Custom API URL input */}
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.bgTertiary,
-                borderColor: colors.border,
-                color: colors.textPrimary,
-              },
-            ]}
-            value={apiUrl}
-            onChangeText={(text) => {
-              setApiUrl(text);
-              setTestSuccess(null);
-            }}
-            placeholder="https://...trycloudflare.com/api/v1"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="none"
-          />
-
-          <View style={styles.buttonRow}>
+          <View style={[styles.buttonRow, { marginTop: 14 }]}>
             <TouchableOpacity
               style={[
                 styles.testBtn,
                 {
-                  backgroundColor: colors.bgTertiary,
-                  borderColor: colors.border,
+                  backgroundColor: '#f59e0b',
+                  borderColor: '#f59e0b',
+                  flex: 1,
                 },
               ]}
-              onPress={handleTestConnection}
-              disabled={testing}
+              onPress={handleTestFirebase}
+              disabled={firebaseTesting}
             >
-              {testing ? (
-                <RefreshCw size={16} color={colors.primary} />
-              ) : (
-                <Text style={[styles.testBtnText, { color: colors.primary }]}>
-                  Kiểm tra kết nối
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-              onPress={handleSaveApiUrl}
-            >
-              <Text style={styles.saveBtnText}>Lưu cấu hình</Text>
+              <RefreshCw
+                size={16}
+                color="#ffffff"
+                style={firebaseTesting ? styles.rotatingIcon : { marginRight: 6 }}
+              />
+              <Text style={[styles.testBtnText, { color: '#ffffff', fontWeight: 'bold' }]}>
+                {firebaseTesting ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
+              </Text>
             </TouchableOpacity>
           </View>
-
-          {testSuccess === true && (
-            <View
-              style={[
-                styles.successBanner,
-                {
-                  backgroundColor: colors.successLight,
-                  borderColor: colors.successBorder,
-                },
-              ]}
-            >
-              <CheckCircle size={16} color={colors.success} />
-              <Text style={[styles.successBannerText, { color: colors.success }]}>
-                Máy chủ sẵn sàng hoạt động (200 OK)
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* 4. App Info Pill */}
         <View style={styles.infoRow}>
           <Info size={14} color={colors.textMuted} />
           <Text style={[styles.infoText, { color: colors.textMuted }]}>
-            DC ĐẲNG CẤP - Product Code Manager v1.0.1
+            DC ĐẲNG CẤP - Product Code Manager v1.0.4
           </Text>
         </View>
 
